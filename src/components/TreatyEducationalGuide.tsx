@@ -17,8 +17,8 @@ export const TreatyEducationalGuide: React.FC = () => {
         </p>
       </div>
 
-      {/* 3 Pillars */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* 4 Treaty Pillars */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Quota Share */}
         <div className="st-card p-4 border-t-4 border-t-blue-500">
           <div className="flex items-center gap-2 mb-2">
@@ -26,12 +26,12 @@ export const TreatyEducationalGuide: React.FC = () => {
             <h4 className="text-sm font-bold text-slate-900">1. Quota Share (80% Retention)</h4>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed mb-3">
-            <b>Proportional Treaty:</b> The ceding company retains a stated percentage (here, <b>80%</b>) of premium and claims, and cedes the complementary proportion (<b>20%</b>) to reinsurers.
+            <b>Proportional Treaty:</b> The ceding company retains <b>80%</b> of premium and claims, and cedes the complementary <b>20%</b> to reinsurers.
           </p>
           <div className="bg-blue-50/60 p-2.5 rounded text-[11px] text-blue-900 space-y-1">
-            <div>• <b>Primary Benefit:</b> Solvency leverage and growth capital.</div>
-            <div>• <b>Ceding Commission:</b> Reinsurer reimburses acquisition costs (default 25%).</div>
-            <div>• <b>First Dollar:</b> Applies from ground up to all subject policies.</div>
+            <div>• <b>Primary Benefit:</b> Solvency relief and growth leverage.</div>
+            <div>• <b>Ceding Commission:</b> 25% reimbursement on acquisition.</div>
+            <div>• <b>First Dollar:</b> Ground-up coverage on all policies.</div>
           </div>
         </div>
 
@@ -39,15 +39,15 @@ export const TreatyEducationalGuide: React.FC = () => {
         <div className="st-card p-4 border-t-4 border-t-amber-500">
           <div className="flex items-center gap-2 mb-2">
             <Shield className="w-4 h-4 text-amber-600" />
-            <h4 className="text-sm font-bold text-slate-900">2. Working Risk XOL ($40K Limit)</h4>
+            <h4 className="text-sm font-bold text-slate-900">2. Working Risk XOL (&#x20c4; 40K)</h4>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed mb-3">
-            <b>Per-Risk Excess of Loss:</b> Protects against large individual claims on a single insured risk (e.g., a major factory fire or yacht destruction).
+            <b>Per-Risk Excess of Loss:</b> Protects against large individual claims on a single insured risk (e.g., commercial plant fire).
           </p>
           <div className="bg-amber-50/60 p-2.5 rounded text-[11px] text-amber-900 space-y-1">
-            <div>• <b>Specified Limit:</b> $40,000 maximum payout per individual risk.</div>
-            <div>• <b>Attachment Point:</b> e.g., $10,000 deductible paid by the cedant.</div>
-            <div>• <b>Inuring Order:</b> Standardly applies after Quota Share reduction.</div>
+            <div>• <b>Specified Limit:</b> &#x20c4; 40,000 maximum payout per risk.</div>
+            <div>• <b>Attachment Point:</b> &#x20c4; 10,000 deductible paid by cedant.</div>
+            <div>• <b>Inuring Order:</b> Standardly applies after QS reduction.</div>
           </div>
         </div>
 
@@ -55,15 +55,31 @@ export const TreatyEducationalGuide: React.FC = () => {
         <div className="st-card p-4 border-t-4 border-t-indigo-600">
           <div className="flex items-center gap-2 mb-2">
             <Zap className="w-4 h-4 text-indigo-600" />
-            <h4 className="text-sm font-bold text-slate-900">3. Cat XOL ($2M xs $200K)</h4>
+            <h4 className="text-sm font-bold text-slate-900">3. Cat XOL (&#x20c4; 2M xs &#x20c4; 200K)</h4>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed mb-3">
-            <b>Per-Event Occurrence Treaty:</b> Protects the company against the accumulation of dozens or hundreds of claims stemming from a single catastrophe.
+            <b>Per-Event Occurrence Treaty:</b> Protects against the accumulation of dozens of claims from a single catastrophe.
           </p>
           <div className="bg-indigo-50/60 p-2.5 rounded text-[11px] text-indigo-900 space-y-1">
-            <div>• <b>Specified Limit:</b> $2,000,000 ($2M) capacity per event.</div>
-            <div>• <b>Event Deductible:</b> Attaches at $200,000 accumulated net loss.</div>
-            <div>• <b>Two-Risk Warranty:</b> Requires at least 2 distinct risks damaged.</div>
+            <div>• <b>Specified Limit:</b> &#x20c4; 2,000,000 capacity per event.</div>
+            <div>• <b>Event Deductible:</b> Attaches at &#x20c4; 200,000 net loss.</div>
+            <div>• <b>Two-Risk Warranty:</b> Requires min 2 distinct risks.</div>
+          </div>
+        </div>
+
+        {/* Aggregate Stop-Loss */}
+        <div className="st-card p-4 border-t-4 border-t-teal-500">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle className="w-4 h-4 text-teal-600" />
+            <h4 className="text-sm font-bold text-slate-900">4. Stop-Loss ASL (Portfolio Cap)</h4>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed mb-3">
+            <b>Aggregate Excess of Loss:</b> Ultimate balance sheet protection capping the insurer's cumulative annual net retention across all risks and events.
+          </p>
+          <div className="bg-teal-50/60 p-2.5 rounded text-[11px] text-teal-900 space-y-1">
+            <div>• <b>Specified Limit:</b> &#x20c4; 600,000 aggregate protection.</div>
+            <div>• <b>Attachment Point:</b> Attaches at &#x20c4; 400,000 cumulative net.</div>
+            <div>• <b>Inuring Order:</b> Last line of defense (inures after Cat XOL).</div>
           </div>
         </div>
       </div>

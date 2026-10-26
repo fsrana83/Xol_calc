@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { OverallCalculationSummary, formatCurrency, formatPercent } from '../utils/reinsuranceEngine';
-import { Layers, Info, BarChart3, HelpCircle } from 'lucide-react';
+import { Layers, Info, BarChart3, HelpCircle, Download } from 'lucide-react';
 
 interface WaterfallChartProps {
   summary: OverallCalculationSummary;
+  onExportPdf?: () => void;
 }
 
-export const WaterfallChart: React.FC<WaterfallChartProps> = ({ summary }) => {
+export const WaterfallChart: React.FC<WaterfallChartProps> = ({ summary, onExportPdf }) => {
   const [viewMode, setViewMode] = useState<'currency' | 'percent'>('currency');
 
   const gross = summary.totalGrossLoss;
@@ -23,15 +24,16 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({ summary }) => {
   // 2: QS Ceded (from gross down by qsCeded)
   // 3: Risk XOL Ceded (from (gross - qs) down by riskXolCeded)
   // 4: Cat XOL Recovery (from (gross - qs - risk) down by catXolRecovery)
-  // 5: Net Retained (from 0 to netRetained)
   const qs = summary.totalQsCeded;
   const risk = summary.totalRiskXolCeded;
   const cat = summary.totalCatXolRecovery;
+  const asl = summary.totalAslRecovery || 0;
   const net = summary.totalNetRetained;
 
   const afterQS = gross - qs;
   const afterRisk = afterQS - risk;
   const afterCat = afterRisk - cat;
+  const afterAsl = afterCat - asl;
 
   const steps = [
     {
@@ -83,6 +85,18 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({ summary }) => {
       topVal: afterRisk,
     },
     {
+      id: 'asl',
+      label: 'Stop-Loss',
+      sublabel: 'Portfolio Cap (ASL)',
+      amount: asl,
+      isReduction: true,
+      isFinal: false,
+      color: 'bg-teal-500',
+      textColor: 'text-teal-600',
+      bottomVal: Math.max(0, afterAsl),
+      topVal: afterCat,
+    },
+    {
       id: 'netRetained',
       label: 'Net Retained',
       sublabel: 'Cedant Net Loss',
@@ -111,28 +125,41 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({ summary }) => {
           </p>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
-          <button
-            onClick={() => setViewMode('currency')}
-            className={`px-3 py-1 rounded-md font-medium transition ${
-              viewMode === 'currency'
-                ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Dollar Value ($)
-          </button>
-          <button
-            onClick={() => setViewMode('percent')}
-            className={`px-3 py-1 rounded-md font-medium transition ${
-              viewMode === 'percent'
-                ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Share of Gross (%)
-          </button>
+        {/* View Toggle & Export */}
+        <div className="flex items-center gap-2">
+          {onExportPdf && (
+            <button
+              onClick={onExportPdf}
+              className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+              title="Download PDF report with summary and waterfall chart"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Export PDF Report</span>
+            </button>
+          )}
+
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+            <button
+              onClick={() => setViewMode('currency')}
+              className={`px-3 py-1 rounded-md font-medium transition ${
+                viewMode === 'currency'
+                  ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Omani Rial (&#x20c4;)
+            </button>
+            <button
+              onClick={() => setViewMode('percent')}
+              className={`px-3 py-1 rounded-md font-medium transition ${
+                viewMode === 'percent'
+                  ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Share of Gross (%)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -222,6 +249,10 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({ summary }) => {
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-indigo-600"></span>
             <span>Cat XOL ({formatPercent(summary.totalGrossLoss > 0 ? (cat / gross) * 100 : 0)})</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-teal-500"></span>
+            <span>Stop-Loss ASL ({formatPercent(summary.totalGrossLoss > 0 ? (asl / gross) * 100 : 0)})</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className={`w-3 h-3 rounded ${net > 1000000 ? 'bg-rose-600' : 'bg-emerald-600'}`}></span>

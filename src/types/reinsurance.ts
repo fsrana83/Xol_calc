@@ -15,11 +15,19 @@ export interface RiskXolTreaty {
 
 export interface CatXolTreaty {
   enabled: boolean;
-  attachmentPoint: number; // e.g., $200,000
-  limit: number; // e.g., $2,000,000 (user specified 200000K - 2 million)
+  attachmentPoint: number; // e.g., 200,000 OMR
+  limit: number; // e.g., 2,000,000 OMR (user specified 200000K - 2 million)
   cedantCoParticipation: number; // e.g., 5% (Cedant's co-insurance in the layer)
   rateOnLine: number; // e.g., 11.0%
   twoRiskWarranty: boolean; // Requires minimum 2 risks to attach
+}
+
+export interface AggregateStopLossTreaty {
+  enabled: boolean;
+  attachmentPoint: number; // Cumulative net portfolio retention threshold before ASL attaches (e.g. 400,000 OMR)
+  limit: number; // Maximum recovery under Stop-Loss (e.g. 600,000 OMR)
+  cedantCoParticipation: number; // Cedant's co-insurance share within the Stop-Loss layer (e.g. 5%)
+  rateOnLine?: number; // Estimated premium rate
 }
 
 export type InuringOrder = 'QS_FIRST' | 'RISK_XOL_FIRST';
@@ -28,6 +36,7 @@ export interface TreatyConfig {
   quotaShare: QuotaShareTreaty;
   riskXol: RiskXolTreaty;
   catXol: CatXolTreaty;
+  aggregateStopLoss: AggregateStopLossTreaty;
   inuringOrder: InuringOrder;
 }
 
@@ -52,6 +61,7 @@ export interface ClaimCalculation {
   riskXolCeded: number;
   netAfterRiskXol: number;
   catXolCededShare: number;
+  aslCededShare: number;
   finalNetRetained: number;
   riskXolStatus: 'Below Attachment' | 'Within Layer (Covered)' | 'Exhausted (Spillover)';
   spilloverAboveRiskLimit: number;
@@ -84,6 +94,12 @@ export interface OverallCalculationSummary {
   totalCatXolRecovery: number;
   totalCatCoParticipation: number;
   totalCatSpillover: number;
+  totalNetBeforeAsl: number;
+  totalAslRecovery: number;
+  totalAslCoParticipation: number;
+  totalAslSpillover: number;
+  aslAttachment: number;
+  aslLimit: number;
   totalReinsuranceRecovery: number;
   totalNetRetained: number;
   effectiveCessionPercent: number; // Total Ceded / Gross Loss * 100

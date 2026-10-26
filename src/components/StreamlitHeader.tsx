@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Layers,
   Activity,
+  Download,
 } from 'lucide-react';
 
 interface StreamlitHeaderProps {
@@ -19,6 +20,8 @@ interface StreamlitHeaderProps {
   isSidebarOpen: boolean;
   onOpenAddModal: () => void;
   onGenerateRandomEvent: () => void;
+  onExportPdf: () => void;
+  isExportingPdf?: boolean;
 }
 
 export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
@@ -29,6 +32,8 @@ export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
   isSidebarOpen,
   onOpenAddModal,
   onGenerateRandomEvent,
+  onExportPdf,
+  isExportingPdf = false,
 }) => {
   const activeScenario = scenarios.find((s) => s.id === activeScenarioId);
 
@@ -58,7 +63,7 @@ export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500 hidden sm:block">
-              80% Quota Share • $40K Risk XOL • $2M Cat XOL (xs $200K) • Real-Time Cascade Simulation
+              Currency: Omani Rial (&#x20c4;) • 80% Quota Share • &#x20c4; 40K Risk XOL • &#x20c4; 2M Cat XOL • Aggregate Stop-Loss (ASL)
             </p>
           </div>
         </div>
@@ -82,6 +87,17 @@ export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Export PDF Report Button */}
+          <button
+            onClick={onExportPdf}
+            disabled={isExportingPdf}
+            className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition disabled:opacity-50"
+            title="Download executive PDF summary and waterfall report"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{isExportingPdf ? 'Exporting...' : 'Export PDF'}</span>
+          </button>
 
           {/* Quick Add Claim */}
           <button

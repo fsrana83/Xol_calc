@@ -97,6 +97,7 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
       'Risk XOL Ceded',
       'Risk XOL Status',
       'Cat XOL Share',
+      'Stop-Loss ASL Share',
       'Cedant Net Retained',
     ];
 
@@ -113,6 +114,7 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
       c.riskXolCeded,
       c.riskXolStatus,
       c.catXolCededShare,
+      c.aslCededShare || 0,
       c.finalNetRetained,
     ]);
 
@@ -123,7 +125,7 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `reinsurance_claim_ledger_${Date.now()}.csv`);
+    link.setAttribute('download', `reinsurance_claim_ledger_OMR_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -138,10 +140,11 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
         acc.netQS += c.netAfterQS;
         acc.risk += c.riskXolCeded;
         acc.cat += c.catXolCededShare;
+        acc.asl += c.aslCededShare || 0;
         acc.net += c.finalNetRetained;
         return acc;
       },
-      { gross: 0, qs: 0, netQS: 0, risk: 0, cat: 0, net: 0 }
+      { gross: 0, qs: 0, netQS: 0, risk: 0, cat: 0, asl: 0, net: 0 }
     );
   }, [filteredClaims]);
 
@@ -253,6 +256,7 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
               </th>
               <th className="py-2.5 px-3 text-center">Risk XOL Status</th>
               <th className="py-2.5 px-3 text-right text-indigo-700">Cat XOL Share</th>
+              <th className="py-2.5 px-3 text-right text-teal-700">Stop-Loss ASL</th>
               <th className="py-2.5 px-3 text-right text-slate-900">
                 <button
                   onClick={() => handleSort('net')}
@@ -268,7 +272,7 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
           <tbody className="divide-y divide-slate-100 font-mono">
             {filteredClaims.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-8 text-center text-slate-400 font-sans">
+                <td colSpan={11} className="py-8 text-center text-slate-400 font-sans">
                   No claims found matching your filter criteria.
                 </td>
               </tr>
@@ -373,6 +377,11 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
                       {formatCurrency(item.catXolCededShare)}
                     </td>
 
+                    {/* Stop-Loss ASL Share */}
+                    <td className="py-2 px-3 text-right text-teal-600 font-medium">
+                      {formatCurrency(item.aslCededShare || 0)}
+                    </td>
+
                     {/* Final Net Retained */}
                     <td className="py-2 px-3 text-right font-bold text-slate-900">
                       {formatCurrency(item.finalNetRetained)}
@@ -425,6 +434,7 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
                   Portfolio Aggregated
                 </td>
                 <td className="py-2.5 px-3 text-right text-indigo-700">{formatCurrency(totals.cat)}</td>
+                <td className="py-2.5 px-3 text-right text-teal-700">{formatCurrency(totals.asl)}</td>
                 <td className="py-2.5 px-3 text-right text-slate-950">{formatCurrency(totals.net)}</td>
                 <td></td>
               </tr>

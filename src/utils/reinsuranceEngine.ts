@@ -8,6 +8,8 @@ import {
 
 export type { OverallCalculationSummary };
 
+export const OMANI_RIAL_SIGN = '\u20C4';
+
 export const DEFAULT_TREATY_CONFIG: TreatyConfig = {
   quotaShare: {
     enabled: true,
@@ -16,30 +18,37 @@ export const DEFAULT_TREATY_CONFIG: TreatyConfig = {
   },
   riskXol: {
     enabled: true,
-    attachmentPoint: 10000, // $10,000 attachment
-    limit: 40000, // $40,000 limit as requested ("Risk XOL limit is 40K")
+    attachmentPoint: 10000, // 10,000 OMR attachment
+    limit: 40000, // 40,000 OMR limit as requested ("Risk XOL limit is 40K")
     rateOnLine: 7.5,
     reinstatements: 1,
   },
   catXol: {
     enabled: true,
-    attachmentPoint: 200000, // $200,000 retention / attachment point
-    limit: 2000000, // $2,000,000 ($2M) limit as requested ("Cat XOl limit is 200000K - 2 million")
+    attachmentPoint: 200000, // 200,000 OMR retention / attachment point
+    limit: 2000000, // 2,000,000 OMR limit as requested ("Cat XOl limit is 200000K - 2 million")
     cedantCoParticipation: 5, // 5% co-reinsurance retained by cedant
     rateOnLine: 12.0,
     twoRiskWarranty: true,
+  },
+  aggregateStopLoss: {
+    enabled: true,
+    attachmentPoint: 400000, // 400,000 OMR attachment threshold
+    limit: 600000, // 600,000 OMR aggregate stop-loss limit
+    cedantCoParticipation: 5, // 5% co-participation
+    rateOnLine: 8.5,
   },
   inuringOrder: 'QS_FIRST',
 };
 
 /**
- * Calculates reinsurance recoveries across Quota Share, Risk XOL, and Cat XOL treaties.
+ * Calculates reinsurance recoveries across Quota Share, Risk XOL, Cat XOL, and Aggregate Stop-Loss treaties.
  */
 export function calculateReinsurance(
   claims: Claim[],
   treaties: TreatyConfig
 ): OverallCalculationSummary {
-  const { quotaShare, riskXol, catXol, inuringOrder } = treaties;
+  const { quotaShare, riskXol, catXol, aggregateStopLoss, inuringOrder } = treaties;
 
   // Step 1: Process per-claim proportional (QS) and Risk XOL
   const intermediateClaims: Array<{
@@ -200,10 +209,40 @@ export function calculateReinsurance(
     }
   }
 
-  // Final per-claim structure
-  const claimBreakdowns: ClaimCalculation[] = intermediateClaims.map((item) => {
+  // Pre-Stop-Loss Claim state (after Cat XOL)
+  const preAslClaims = intermediateClaims.map((item) => {
     const catShare = claimCatRecoveries[item.claim.id] || 0;
-    const finalNet = item.netAfterRiskXol - catShare;
+    const netAfterCat = Math.max(0, item.netAfterRiskXol - catShare);
+    return {
+      ...item,
+      catShare,
+      netAfterCat,
+    };
+  });
+
+  // Step 3: Aggregate Stop-Loss (ASL) Calculation on Cumulative Portfolio Net
+  const totalNetBeforeAsl = preAslClaims.reduce((s, c) => s + c.netAfterCat, 0);
+
+  let totalAslRecovery = 0;
+  let totalAslCoParticipation = 0;
+  let totalAslSpillover = 0;
+  const aslAttachment = aggregateStopLoss.attachmentPoint;
+  const aslLimit = aggregateStopLoss.limit;
+
+  if (aggregateStopLoss.enabled && aggregateStopLoss.limit > 0) {
+    if (totalNetBeforeAsl > aslAttachment) {
+      const excess = totalNetBeforeAsl - aslAttachment;
+      const grossAslCovered = Math.min(excess, aslLimit);
+      totalAslCoParticipation = grossAslCovered * (Math.max(0, aggregateStopLoss.cedantCoParticipation) / 100);
+      totalAslRecovery = grossAslCovered - totalAslCoParticipation;
+      totalAslSpillover = Math.max(0, excess - aslLimit);
+    }
+  }
+
+  // Final per-claim structure (allocating ASL recovery pro-rata across claims based on netAfterCat)
+  const claimBreakdowns: ClaimCalculation[] = preAslClaims.map((item) => {
+    const aslShare = totalNetBeforeAsl > 0 ? (item.netAfterCat / totalNetBeforeAsl) * totalAslRecovery : 0;
+    const finalNet = Math.max(0, item.netAfterCat - aslShare);
     return {
       claim: item.claim,
       grossLoss: item.grossLoss,
@@ -211,8 +250,9 @@ export function calculateReinsurance(
       netAfterQS: item.netAfterQS,
       riskXolCeded: item.riskXolCeded,
       netAfterRiskXol: item.netAfterRiskXol,
-      catXolCededShare: catShare,
-      finalNetRetained: Math.max(0, finalNet),
+      catXolCededShare: item.catShare,
+      aslCededShare: aslShare,
+      finalNetRetained: finalNet,
       riskXolStatus: item.riskXolStatus,
       spilloverAboveRiskLimit: item.spilloverAboveRiskLimit,
     };
@@ -226,7 +266,7 @@ export function calculateReinsurance(
   const totalCatCoParticipation = Object.values(eventBreakdowns).reduce((s, e) => s + e.catCedantCoParticipation, 0);
   const totalCatSpillover = Object.values(eventBreakdowns).reduce((s, e) => s + e.catSpilloverUncovered, 0);
 
-  const totalReinsuranceRecovery = totalQsCeded + totalRiskXolCeded + totalCatXolRecovery;
+  const totalReinsuranceRecovery = totalQsCeded + totalRiskXolCeded + totalCatXolRecovery + totalAslRecovery;
   const totalNetRetained = Math.max(0, totalGrossLoss - totalReinsuranceRecovery);
 
   const effectiveCessionPercent = totalGrossLoss > 0 ? (totalReinsuranceRecovery / totalGrossLoss) * 100 : 0;
@@ -240,6 +280,12 @@ export function calculateReinsurance(
     totalCatXolRecovery,
     totalCatCoParticipation,
     totalCatSpillover,
+    totalNetBeforeAsl,
+    totalAslRecovery,
+    totalAslCoParticipation,
+    totalAslSpillover,
+    aslAttachment,
+    aslLimit,
     totalReinsuranceRecovery,
     totalNetRetained,
     effectiveCessionPercent,
@@ -252,12 +298,13 @@ export function calculateReinsurance(
 }
 
 export function formatCurrency(amount: number): string {
-  if (isNaN(amount) || amount === null || amount === undefined) return '$0';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  if (isNaN(amount) || amount === null || amount === undefined) {
+    return `${OMANI_RIAL_SIGN} 0`;
+  }
+  const formattedNumber = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 0,
   }).format(amount);
+  return `${OMANI_RIAL_SIGN} ${formattedNumber}`;
 }
 
 export function formatPercent(value: number): string {

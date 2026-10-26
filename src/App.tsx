@@ -26,6 +26,7 @@ import { SensitivityMatrix } from './components/SensitivityMatrix';
 import { ScenarioComparison } from './components/ScenarioComparison';
 import { AddClaimModal } from './components/AddClaimModal';
 import { TreatyEducationalGuide } from './components/TreatyEducationalGuide';
+import { generateReinsurancePdfReport } from './utils/pdfReportGenerator';
 import {
   BarChart3,
   FileSpreadsheet,
@@ -50,6 +51,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'ledger' | 'sensitivity' | 'scenarios' | 'guide'>('overview');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
 
   // Helper to trigger toast notification
@@ -206,7 +208,20 @@ export default function App() {
 
   const handleResetTreaties = () => {
     setTreaties(DEFAULT_TREATY_CONFIG);
-    notify('Reset treaties to default: 80% QS, $40K Risk XOL, $2M Cat XOL (xs $200K)');
+    notify('Reset treaties to default: 80% QS, \u20c4 40K Risk XOL, \u20c4 2M Cat XOL, \u20c4 600K ASL');
+  };
+
+  const handleExportPdf = () => {
+    try {
+      setIsExportingPdf(true);
+      generateReinsurancePdfReport(activeScenario, treaties, summary);
+      notify(`PDF Report downloaded for ${activeScenario.title}`);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+      notify('Failed to generate PDF report. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   return (
@@ -228,6 +243,8 @@ export default function App() {
         isSidebarOpen={isSidebarOpen}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onGenerateRandomEvent={handleGenerateRandomEvent}
+        onExportPdf={handleExportPdf}
+        isExportingPdf={isExportingPdf}
       />
 
       {/* Main Workspace Layout */}
@@ -259,7 +276,7 @@ export default function App() {
             </div>
 
             {/* Quick treaty reminder pill */}
-            <div className="flex items-center gap-2 self-start sm:self-center bg-white px-3 py-1.5 rounded-md border border-slate-200 text-xs shadow-2xs">
+            <div className="flex items-center gap-2 self-start sm:self-center bg-white px-3 py-1.5 rounded-md border border-slate-200 text-xs shadow-2xs flex-wrap">
               <span className="text-slate-400">Structure:</span>
               <span className="font-mono font-bold text-blue-600">
                 {treaties.quotaShare.retentionPercent}% QS
@@ -271,6 +288,10 @@ export default function App() {
               <span className="text-slate-300">•</span>
               <span className="font-mono font-bold text-indigo-600">
                 {formatCurrency(treaties.catXol.limit)} Cat
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="font-mono font-bold text-teal-600">
+                {formatCurrency(treaties.aggregateStopLoss?.limit || 600000)} ASL
               </span>
             </div>
           </div>
@@ -344,7 +365,7 @@ export default function App() {
           {/* Tab 1: Overview & Waterfall */}
           {activeTab === 'overview' && (
             <div>
-              <WaterfallChart summary={summary} />
+              <WaterfallChart summary={summary} onExportPdf={handleExportPdf} />
               <TreatyTowerVisualizer treaties={treaties} summary={summary} />
             </div>
           )}

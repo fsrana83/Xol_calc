@@ -34,6 +34,7 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
   const [qsExpanded, setQsExpanded] = useState(true);
   const [riskExpanded, setRiskExpanded] = useState(true);
   const [catExpanded, setCatExpanded] = useState(true);
+  const [aslExpanded, setAslExpanded] = useState(true);
   const [inuringExpanded, setInuringExpanded] = useState(false);
 
   const updateQuotaShare = (fields: Partial<TreatyConfig['quotaShare']>) => {
@@ -54,6 +55,13 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
     onUpdateTreaties({
       ...treaties,
       catXol: { ...treaties.catXol, ...fields },
+    });
+  };
+
+  const updateAggregateStopLoss = (fields: Partial<TreatyConfig['aggregateStopLoss']>) => {
+    onUpdateTreaties({
+      ...treaties,
+      aggregateStopLoss: { ...treaties.aggregateStopLoss, ...fields },
     });
   };
 
@@ -118,12 +126,13 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
         <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-md text-[11px] text-blue-900 leading-relaxed">
           <div className="font-semibold flex items-center gap-1 mb-1 text-blue-950">
             <Info className="w-3.5 h-3.5 text-blue-600" />
-            <span>Assumed Reinsurance Structure</span>
+            <span>Assumed Reinsurance Structure (Currency: Omani Rial ﷼/&#x20c4;)</span>
           </div>
           <ul className="list-disc pl-4 space-y-0.5 text-blue-800">
             <li><b>Quota Share:</b> 80% Retention (20% Ceded)</li>
-            <li><b>Risk XOL:</b> Limit $40,000 per risk</li>
-            <li><b>Cat XOL:</b> Limit $2,000,000 xs $200,000</li>
+            <li><b>Risk XOL:</b> Limit {formatCurrency(40000)} per risk</li>
+            <li><b>Cat XOL:</b> Limit {formatCurrency(2000000)} xs {formatCurrency(200000)}</li>
+            <li><b>Aggregate Stop-Loss:</b> Limit {formatCurrency(treaties.aggregateStopLoss?.limit || 600000)} xs {formatCurrency(treaties.aggregateStopLoss?.attachmentPoint || 400000)}</li>
           </ul>
         </div>
 
@@ -461,7 +470,133 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
           )}
         </div>
 
-        {/* 4. INURING PRIORITY ARCHITECTURE */}
+        {/* 4. AGGREGATE STOP-LOSS TREATY SECTION */}
+        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
+          <div
+            onClick={() => setAslExpanded(!aslExpanded)}
+            className="p-3 bg-slate-50 flex items-center justify-between cursor-pointer hover:bg-slate-100/80 transition"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                4. Aggregate Stop-Loss (ASL)
+              </span>
+            </div>
+            {aslExpanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+          </div>
+
+          {aslExpanded && (
+            <div className="p-3.5 space-y-3.5 text-xs">
+              {/* Enable Toggle */}
+              <div className="flex items-center justify-between">
+                <label className="text-slate-700 font-medium cursor-pointer" htmlFor="asl-toggle">
+                  Enable Aggregate Stop-Loss
+                </label>
+                <input
+                  id="asl-toggle"
+                  type="checkbox"
+                  checked={treaties.aggregateStopLoss?.enabled ?? true}
+                  onChange={(e) => updateAggregateStopLoss({ enabled: e.target.checked })}
+                  className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer accent-teal-600"
+                />
+              </div>
+
+              {treaties.aggregateStopLoss?.enabled && (
+                <>
+                  {/* ASL Limit */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span className="font-medium">Stop-Loss Limit</span>
+                      <span className="font-mono font-bold text-teal-700 text-sm">
+                        {formatCurrency(treaties.aggregateStopLoss.limit)}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="100000"
+                      max="2000000"
+                      step="50000"
+                      value={treaties.aggregateStopLoss.limit}
+                      onChange={(e) => updateAggregateStopLoss({ limit: Number(e.target.value) })}
+                      className="w-full accent-teal-600 cursor-pointer"
+                    />
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {[300000, 500000, 600000, 1000000].map((preset) => (
+                        <button
+                          key={preset}
+                          onClick={() => updateAggregateStopLoss({ limit: preset })}
+                          className={`px-2 py-0.5 rounded text-[10px] font-mono border transition ${
+                            treaties.aggregateStopLoss.limit === preset
+                              ? 'bg-teal-100 border-teal-300 text-teal-900 font-bold'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {formatCurrency(preset)} {preset === 600000 ? '(Default)' : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Attachment Point / Deductible */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-slate-600 flex items-center justify-between">
+                      <span>Portfolio Attachment Deductible</span>
+                      <span className="font-mono font-semibold text-slate-800">
+                        {formatCurrency(treaties.aggregateStopLoss.attachmentPoint)}
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      min="50000"
+                      max="1500000"
+                      step="25000"
+                      value={treaties.aggregateStopLoss.attachmentPoint}
+                      onChange={(e) =>
+                        updateAggregateStopLoss({ attachmentPoint: Math.max(0, Number(e.target.value)) })
+                      }
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded font-mono text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Cedant Co-Participation */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-slate-600 text-[11px]">
+                      <span>Cedant Co-Participation in ASL Layer</span>
+                      <span className="font-mono font-bold text-slate-800">
+                        {treaties.aggregateStopLoss.cedantCoParticipation}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="20"
+                      step="1"
+                      value={treaties.aggregateStopLoss.cedantCoParticipation}
+                      onChange={(e) =>
+                        updateAggregateStopLoss({ cedantCoParticipation: Number(e.target.value) })
+                      }
+                      className="w-full accent-teal-600 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Coverage Summary Box */}
+                  <div className="p-2 bg-teal-50/70 border border-teal-200 rounded text-[11px] text-teal-900">
+                    <span className="font-semibold">Portfolio Cap:</span>{' '}
+                    {formatCurrency(treaties.aggregateStopLoss.limit)} xs{' '}
+                    {formatCurrency(treaties.aggregateStopLoss.attachmentPoint)}
+                    <div className="text-[10px] text-teal-800 mt-0.5 font-mono">
+                      Attaches once cumulative net retained losses hit{' '}
+                      {formatCurrency(treaties.aggregateStopLoss.attachmentPoint)}; protects up to{' '}
+                      {formatCurrency(treaties.aggregateStopLoss.attachmentPoint + treaties.aggregateStopLoss.limit)}.
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 5. INURING PRIORITY ARCHITECTURE */}
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
           <div
             onClick={() => setInuringExpanded(!inuringExpanded)}
@@ -470,7 +605,7 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
             <div className="flex items-center gap-2">
               <Workflow className="w-4 h-4 text-slate-700" />
               <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                4. Inuring Cascade Order
+                5. Inuring Cascade Order
               </span>
             </div>
             {inuringExpanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}

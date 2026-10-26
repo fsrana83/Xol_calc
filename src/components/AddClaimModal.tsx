@@ -101,29 +101,29 @@ export const AddClaimModal: React.FC<AddClaimModalProps> = ({
               <button
                 type="button"
                 onClick={() =>
-                  handleQuickPreset('Apex Logistics Central Depot', 280000, 'Warehouse & Logistics')
+                  handleQuickPreset('Duqm Marine Engineering Facility', 280000, 'Warehouse & Logistics')
                 }
                 className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[11px] text-slate-700 font-medium transition"
               >
-                Mega Loss ($280k)
+                Mega Loss (&#x20c4; 280k)
               </button>
               <button
                 type="button"
                 onClick={() =>
-                  handleQuickPreset('Harbor Commercial Center', 50000, 'Commercial Property')
+                  handleQuickPreset('Al Khuwair Commercial Plaza', 50000, 'Commercial Property')
                 }
                 className="px-2 py-1 bg-amber-50 hover:bg-amber-100 rounded text-[11px] text-amber-800 font-medium border border-amber-200 transition"
               >
-                Exact $50k Risk Limit Test
+                Risk Limit Test (&#x20c4; 50k)
               </button>
               <button
                 type="button"
                 onClick={() =>
-                  handleQuickPreset('Sunrise Retail Plaza', 12500, 'Commercial Property')
+                  handleQuickPreset('Qurum Retail Center', 12500, 'Commercial Property')
                 }
                 className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[11px] text-slate-700 font-medium transition"
               >
-                Small Loss ($12.5k)
+                Small Loss (&#x20c4; 12.5k)
               </button>
             </div>
           </div>
@@ -136,7 +136,7 @@ export const AddClaimModal: React.FC<AddClaimModalProps> = ({
             <input
               type="text"
               required
-              placeholder="e.g., Summit Technology Park Tower A"
+              placeholder="e.g., Muscat Hills Executive Tower"
               value={insuredName}
               onChange={(e) => setInsuredName(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-[#ff4b4b] focus:outline-none"
@@ -147,7 +147,7 @@ export const AddClaimModal: React.FC<AddClaimModalProps> = ({
             {/* Gross Loss */}
             <div>
               <label className="text-xs font-semibold text-slate-700 block mb-1">
-                Gross Incurred Loss ($) *
+                Gross Incurred Loss (&#x20c4; OMR) *
               </label>
               <input
                 type="number"

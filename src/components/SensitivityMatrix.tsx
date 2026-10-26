@@ -80,7 +80,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({
             </h3>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Test how combinations of Quota Share retention (80% default) and Cat XOL limit ($2M default) impact net retained loss
+            Test how combinations of Quota Share retention (80% default) and Cat XOL limit (&#x20c4; 2M default) impact net retained loss
           </p>
         </div>
 
@@ -94,7 +94,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Cedant Net Retained ($)
+            Cedant Net Retained (&#x20c4;)
           </button>
           <button
             onClick={() => setActiveMetric('totalRecovery')}
@@ -104,7 +104,7 @@ export const SensitivityMatrix: React.FC<SensitivityMatrixProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Reinsurance Recovery ($)
+            Reinsurance Recovery (&#x20c4;)
           </button>
           <button
             onClick={() => setActiveMetric('cessionPercent')}

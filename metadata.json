@@ -1,6 +1,6 @@
 {
-  "name": "Reinsurance XOL & Quota Share Calculator",
-  "description": "Streamlit-style interactive actuarial calculator for Quota Share, Working Risk XOL, and Catastrophe XOL reinsurance treaties with scenario simulation and impact analysis.",
+  "name": "Reinsurance XOL, QS & Stop-Loss Calculator",
+  "description": "Streamlit-style actuarial workbench for Quota Share, Working Risk XOL, Catastrophe XOL, and Aggregate Stop-Loss treaties in Omani Rial (U+20C4).",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

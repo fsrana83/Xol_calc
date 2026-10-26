@@ -99,6 +99,11 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                     <span className="font-bold">{formatCurrency(summary.totalCatXolRecovery)}</span>
                   </div>
 
+                  <div className="flex justify-between items-center text-teal-700 bg-teal-50/50 px-2 py-1 rounded">
+                    <span className="font-sans text-teal-800">Stop-Loss ASL Recovery:</span>
+                    <span className="font-bold">{formatCurrency(summary.totalAslRecovery || 0)}</span>
+                  </div>
+
                   <div className="flex justify-between items-center text-slate-900 border-t border-slate-200 pt-1.5 font-bold">
                     <span className="font-sans text-slate-700">Company Net Retained:</span>
                     <span className={summary.totalNetRetained > 1000000 ? 'text-rose-700' : 'text-slate-900'}>
@@ -148,6 +153,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                 <th className="py-2.5 px-3 text-right text-blue-700">QS Ceded</th>
                 <th className="py-2.5 px-3 text-right text-amber-700">Risk XOL</th>
                 <th className="py-2.5 px-3 text-right text-indigo-700">Cat XOL</th>
+                <th className="py-2.5 px-3 text-right text-teal-700">Stop-Loss</th>
                 <th className="py-2.5 px-3 text-right text-emerald-700">Total Ceded</th>
                 <th className="py-2.5 px-3 text-right text-slate-900 font-bold">Net Retained</th>
                 <th className="py-2.5 px-3 text-right">Cession %</th>
@@ -177,6 +183,9 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                   <td className="py-2 px-3 text-right text-blue-600">{formatCurrency(summary.totalQsCeded)}</td>
                   <td className="py-2 px-3 text-right text-amber-600">{formatCurrency(summary.totalRiskXolCeded)}</td>
                   <td className="py-2 px-3 text-right text-indigo-600">{formatCurrency(summary.totalCatXolRecovery)}</td>
+                  <td className="py-2 px-3 text-right text-teal-600 font-medium">
+                    {formatCurrency(summary.totalAslRecovery || 0)}
+                  </td>
                   <td className="py-2 px-3 text-right text-emerald-600 font-medium">
                     {formatCurrency(summary.totalReinsuranceRecovery)}
                   </td>
