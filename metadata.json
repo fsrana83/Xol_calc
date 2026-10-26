@@ -1,6 +1,6 @@
 {
-  "name": "Reinsurance XOL, QS & Stop-Loss Calculator",
-  "description": "Streamlit-style actuarial workbench for Quota Share, Working Risk XOL, Catastrophe XOL, and Aggregate Stop-Loss treaties in Omani Rial (U+20C4).",
+  "name": "Reinsurance Recovery Simulator",
+  "description": "Multi-line actuarial workbench for Quota Share, Working Risk XOL, Catastrophe XOL, and Aggregate Stop-Loss across Motor, P&C, Medical, and Group Life in Omani Rial (U+20C4).",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -26,7 +26,12 @@ import { SensitivityMatrix } from './components/SensitivityMatrix';
 import { ScenarioComparison } from './components/ScenarioComparison';
 import { AddClaimModal } from './components/AddClaimModal';
 import { TreatyEducationalGuide } from './components/TreatyEducationalGuide';
+import { LossDistributionHistogram } from './components/LossDistributionHistogram';
+import { StressTestingWorkbench } from './components/StressTestingWorkbench';
+import { UseCasesSheet } from './components/UseCasesSheet';
+import { LobTreatySetup } from './components/LobTreatySetup';
 import { generateReinsurancePdfReport } from './utils/pdfReportGenerator';
+import { generateWorstCaseScenario } from './utils/worstCaseGenerator';
 import {
   BarChart3,
   FileSpreadsheet,
@@ -37,6 +42,10 @@ import {
   CheckCircle,
   AlertTriangle,
   RotateCcw,
+  TrendingUp,
+  Zap,
+  FileText,
+  Shield,
 } from 'lucide-react';
 
 export default function App() {
@@ -49,7 +58,17 @@ export default function App() {
 
   // UI state
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'ledger' | 'sensitivity' | 'scenarios' | 'guide'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    | 'overview'
+    | 'lob-setup'
+    | 'ledger'
+    | 'distribution'
+    | 'stress'
+    | 'sensitivity'
+    | 'scenarios'
+    | 'usecases'
+    | 'guide'
+  >('overview');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
@@ -224,6 +243,35 @@ export default function App() {
     }
   };
 
+  const handleApplyShockToScenario = (shockPercent: number) => {
+    const factor = 1 + shockPercent / 100;
+    setScenarios((prev) =>
+      prev.map((sc) => {
+        if (sc.id !== activeScenarioId) return sc;
+        return {
+          ...sc,
+          claims: sc.claims.map((c) => ({
+            ...c,
+            grossLoss: Math.round(c.grossLoss * factor),
+          })),
+        };
+      })
+    );
+    notify(
+      `Applied ${shockPercent >= 0 ? '+' : ''}${shockPercent}% stress shock to all claims in ${activeScenario.title}`
+    );
+  };
+
+  const handleGenerateWorstCase = () => {
+    const worstCaseScenario = generateWorstCaseScenario(treaties);
+    setScenarios((prev) => [worstCaseScenario, ...prev]);
+    setActiveScenarioId(worstCaseScenario.id);
+    const totalGross = worstCaseScenario.claims.reduce((s, c) => s + c.grossLoss, 0);
+    notify(
+      `Generated Worst-Case Scenario (${worstCaseScenario.claims.length} claims)! Total Gross: ${formatCurrency(totalGross)} — ASL 100% Exhausted!`
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#fafbfc] text-[#31333f] flex flex-col font-sans">
       {/* Toast Notification */}
@@ -243,6 +291,7 @@ export default function App() {
         isSidebarOpen={isSidebarOpen}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onGenerateRandomEvent={handleGenerateRandomEvent}
+        onGenerateWorstCase={handleGenerateWorstCase}
         onExportPdf={handleExportPdf}
         isExportingPdf={isExportingPdf}
       />
@@ -299,13 +348,13 @@ export default function App() {
           {/* KPI Metrics Row */}
           <MetricsRow summary={summary} />
 
-          {/* Streamlit Tabs Navigation */}
+          {/* Tabs Navigation */}
           <div className="border-b border-slate-200 mb-6 flex items-center gap-1 sm:gap-2 overflow-x-auto text-xs font-semibold">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
                 activeTab === 'overview'
-                  ? 'border-[#ff4b4b] text-[#ff4b4b]'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -314,10 +363,22 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => setActiveTab('lob-setup')}
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'lob-setup'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Shield className="w-4 h-4 text-indigo-600" />
+              <span>LOB Treaty Setup (Motor, P&C, Medical, Life)</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('ledger')}
-              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
                 activeTab === 'ledger'
-                  ? 'border-[#ff4b4b] text-[#ff4b4b]'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -326,22 +387,46 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => setActiveTab('distribution')}
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'distribution'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Loss Distribution & VaR</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('stress')}
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'stress'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Zap className="w-4 h-4" />
+              <span>Stress Testing & Shocks</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('sensitivity')}
-              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
                 activeTab === 'sensitivity'
-                  ? 'border-[#ff4b4b] text-[#ff4b4b]'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               <Grid3X3 className="w-4 h-4" />
-              <span>Sensitivity Matrix (What-If)</span>
+              <span>Sensitivity Matrix</span>
             </button>
 
             <button
               onClick={() => setActiveTab('scenarios')}
-              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
                 activeTab === 'scenarios'
-                  ? 'border-[#ff4b4b] text-[#ff4b4b]'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -350,24 +435,83 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => setActiveTab('usecases')}
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'usecases'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Use Cases Master Sheet (DOCX/PDF)</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('guide')}
-              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap ${
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
                 activeTab === 'guide'
-                  ? 'border-[#ff4b4b] text-[#ff4b4b]'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               <BookOpen className="w-4 h-4" />
-              <span>Actuarial Guide & Terminology</span>
+              <span>Actuarial Guide</span>
             </button>
           </div>
 
           {/* Tab 1: Overview & Waterfall */}
           {activeTab === 'overview' && (
-            <div>
+            <div className="space-y-6">
+              {/* Quick LOB Status Strip */}
+              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-md bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold tracking-tight">
+                      LOB Treaty Attachment Status
+                    </span>
+                    <p className="text-[11px] text-slate-300">
+                      Independent Quota Share, Risk XOL, Cat XOL & Stop-Loss rules per line
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-800">
+                    Motor: {Object.values(treaties.lobTreaties?.['Motor'] || {}).filter(Boolean).length}/4
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800">
+                    P&C: {Object.values(treaties.lobTreaties?.['P&C Lines'] || {}).filter(Boolean).length}/4
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800">
+                    Medical: {Object.values(treaties.lobTreaties?.['Medical Lines'] || {}).filter(Boolean).length}/4
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800">
+                    Life: {Object.values(treaties.lobTreaties?.['Group Life Lines'] || {}).filter(Boolean).length}/4
+                  </span>
+                  <button
+                    onClick={() => setActiveTab('lob-setup')}
+                    className="ml-1 text-[11px] font-semibold text-indigo-300 hover:text-white underline cursor-pointer"
+                  >
+                    Configure Matrix →
+                  </button>
+                </div>
+              </div>
+
               <WaterfallChart summary={summary} onExportPdf={handleExportPdf} />
               <TreatyTowerVisualizer treaties={treaties} summary={summary} />
             </div>
+          )}
+
+          {/* Tab: LOB Treaty Setup Matrix */}
+          {activeTab === 'lob-setup' && (
+            <LobTreatySetup
+              treaties={treaties}
+              onUpdateTreaties={setTreaties}
+              summary={summary}
+            />
           )}
 
           {/* Tab 2: Claim Ledger */}
@@ -381,7 +525,22 @@ export default function App() {
             />
           )}
 
-          {/* Tab 3: Sensitivity Matrix */}
+          {/* Tab 3: Loss Distribution Histogram */}
+          {activeTab === 'distribution' && (
+            <LossDistributionHistogram claims={activeScenario.claims} treaties={treaties} />
+          )}
+
+          {/* Tab 4: Stress Testing Workbench */}
+          {activeTab === 'stress' && (
+            <StressTestingWorkbench
+              claims={activeScenario.claims}
+              treaties={treaties}
+              onApplyShockToScenario={handleApplyShockToScenario}
+              onGenerateWorstCase={handleGenerateWorstCase}
+            />
+          )}
+
+          {/* Tab 5: Sensitivity Matrix */}
           {activeTab === 'sensitivity' && (
             <SensitivityMatrix
               claims={activeScenario.claims}
@@ -395,17 +554,23 @@ export default function App() {
             />
           )}
 
-          {/* Tab 4: Scenario Comparison */}
+          {/* Tab 6: Scenario Comparison */}
           {activeTab === 'scenarios' && (
             <ScenarioComparison
               scenarios={scenarios}
               activeScenarioId={activeScenarioId}
               treaties={treaties}
               onSelectScenario={handleSelectScenario}
+              onGenerateWorstCase={handleGenerateWorstCase}
             />
           )}
 
-          {/* Tab 5: Educational Guide */}
+          {/* Tab 7: Use Cases Sheet */}
+          {activeTab === 'usecases' && (
+            <UseCasesSheet onSelectScenarioPreset={handleSelectScenario} />
+          )}
+
+          {/* Tab 8: Educational Guide */}
           {activeTab === 'guide' && <TreatyEducationalGuide />}
         </main>
       </div>

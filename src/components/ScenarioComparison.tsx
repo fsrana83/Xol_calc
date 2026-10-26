@@ -1,13 +1,14 @@
 import React from 'react';
 import { ScenarioPreset, TreatyConfig } from '../types/reinsurance';
 import { calculateReinsurance, formatCurrency, formatPercent } from '../utils/reinsuranceEngine';
-import { Layers, ArrowRight, Play, Shield, Zap, TrendingUp, CheckCircle } from 'lucide-react';
+import { Layers, ArrowRight, Play, Shield, Zap, TrendingUp, CheckCircle, ShieldAlert } from 'lucide-react';
 
 interface ScenarioComparisonProps {
   scenarios: ScenarioPreset[];
   activeScenarioId: string;
   treaties: TreatyConfig;
   onSelectScenario: (scenarioId: string) => void;
+  onGenerateWorstCase?: () => void;
 }
 
 export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
@@ -15,6 +16,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
   activeScenarioId,
   treaties,
   onSelectScenario,
+  onGenerateWorstCase,
 }) => {
   // Precalculate results for each scenario under current treaties
   const scenarioResults = scenarios.map((scenario) => {
@@ -30,15 +32,30 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
     <div className="space-y-6">
       {/* Intro Header */}
       <div className="st-card p-5">
-        <div className="flex items-center gap-2 mb-1">
-          <Layers className="w-5 h-5 text-[#ff4b4b]" />
-          <h3 className="text-base font-bold text-slate-900">
-            Cross-Scenario Comparative Stress Testing
-          </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Layers className="w-5 h-5 text-[#ff4b4b]" />
+              <h3 className="text-base font-bold text-slate-900">
+                Cross-Scenario Comparative Stress Testing
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 max-w-2xl">
+              Evaluates how current treaty parameters perform across different peril profiles, shock loss events, and catastrophic tail risks in Omani Rial (&#x20c4;).
+            </p>
+          </div>
+
+          {onGenerateWorstCase && (
+            <button
+              onClick={onGenerateWorstCase}
+              className="px-3 py-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-md text-xs font-bold shadow-xs flex items-center gap-2 transition cursor-pointer shrink-0 border border-red-700/50"
+              title="Add an engineered worst-case disaster scenario to the scenario list"
+            >
+              <ShieldAlert className="w-4 h-4 text-amber-300" />
+              <span>Generate Worst-Case (Exhaust ASL)</span>
+            </button>
+          )}
         </div>
-        <p className="text-xs text-slate-500">
-          Evaluates how the current treaty parameters (80% QS retention, $40K Risk XOL, $2M Cat XOL) perform across different peril profiles and shock loss events.
-        </p>
       </div>
 
       {/* Scenario Cards Grid */}

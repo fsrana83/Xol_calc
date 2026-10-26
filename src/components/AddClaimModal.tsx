@@ -18,9 +18,9 @@ export const AddClaimModal: React.FC<AddClaimModalProps> = ({
   activeEventId,
 }) => {
   const [insuredName, setInsuredName] = useState('');
-  const [lob, setLob] = useState<Claim['lob']>('Commercial Property');
+  const [lob, setLob] = useState<Claim['lob']>('P&C Lines');
   const [grossLoss, setGrossLoss] = useState<string>('75000');
-  const [location, setLocation] = useState('Metro City, District 1');
+  const [location, setLocation] = useState('Muscat Capital District');
   const [claimNumber, setClaimNumber] = useState(`CLM-2026-${Math.floor(100 + Math.random() * 900)}`);
   const [policyNumber, setPolicyNumber] = useState(`POL-2026-${Math.floor(1000 + Math.random() * 9000)}`);
   const [error, setError] = useState('');
@@ -95,35 +95,44 @@ export const AddClaimModal: React.FC<AddClaimModalProps> = ({
           {/* Quick Preset Buttons */}
           <div>
             <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-              Quick Test Templates
+              Quick Test Templates (by LOB)
             </label>
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
                 onClick={() =>
-                  handleQuickPreset('Duqm Marine Engineering Facility', 280000, 'Warehouse & Logistics')
+                  handleQuickPreset('National Transport & Commercial Logistics Fleet', 65000, 'Motor')
                 }
-                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[11px] text-slate-700 font-medium transition"
+                className="px-2 py-1 bg-sky-50 hover:bg-sky-100 rounded text-[11px] text-sky-800 font-medium border border-sky-200 transition cursor-pointer"
               >
-                Mega Loss (&#x20c4; 280k)
+                Motor Fleet (&#x20c4; 65k)
               </button>
               <button
                 type="button"
                 onClick={() =>
-                  handleQuickPreset('Al Khuwair Commercial Plaza', 50000, 'Commercial Property')
+                  handleQuickPreset('Sohar Petrochemical Synthesis Complex', 350000, 'P&C Lines')
                 }
-                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 rounded text-[11px] text-amber-800 font-medium border border-amber-200 transition"
+                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 rounded text-[11px] text-amber-800 font-medium border border-amber-200 transition cursor-pointer"
               >
-                Risk Limit Test (&#x20c4; 50k)
+                P&C Mega Loss (&#x20c4; 350k)
               </button>
               <button
                 type="button"
                 onClick={() =>
-                  handleQuickPreset('Qurum Retail Center', 12500, 'Commercial Property')
+                  handleQuickPreset('Corporate Workforce Medical Epidemic Aggregation', 180000, 'Medical Lines')
                 }
-                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[11px] text-slate-700 font-medium transition"
+                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 rounded text-[11px] text-emerald-800 font-medium border border-emerald-200 transition cursor-pointer"
               >
-                Small Loss (&#x20c4; 12.5k)
+                Medical Spike (&#x20c4; 180k)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  handleQuickPreset('Duqm Marine Offshore Contractor Workforce Life', 120000, 'Group Life Lines')
+                }
+                className="px-2 py-1 bg-purple-50 hover:bg-purple-100 rounded text-[11px] text-purple-800 font-medium border border-purple-200 transition cursor-pointer"
+              >
+                Group Life Clash (&#x20c4; 120k)
               </button>
             </div>
           </div>
@@ -139,7 +148,7 @@ export const AddClaimModal: React.FC<AddClaimModalProps> = ({
               placeholder="e.g., Muscat Hills Executive Tower"
               value={insuredName}
               onChange={(e) => setInsuredName(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-[#ff4b4b] focus:outline-none"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-indigo-600 focus:outline-none"
             />
           </div>
 
@@ -157,25 +166,33 @@ export const AddClaimModal: React.FC<AddClaimModalProps> = ({
                 placeholder="75000"
                 value={grossLoss}
                 onChange={(e) => setGrossLoss(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-[#ff4b4b] focus:outline-none"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-xs font-mono font-bold text-slate-900 focus:ring-1 focus:ring-indigo-600 focus:outline-none"
               />
             </div>
 
             {/* Line of Business */}
             <div>
               <label className="text-xs font-semibold text-slate-700 block mb-1">
-                Line of Business (LOB)
+                Line of Business (LOB) *
               </label>
               <select
                 value={lob}
                 onChange={(e) => setLob(e.target.value as Claim['lob'])}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-[#ff4b4b] focus:outline-none"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-indigo-600 focus:outline-none bg-white font-medium"
               >
-                <option value="Commercial Property">Commercial Property</option>
-                <option value="Industrial Plant">Industrial Plant</option>
-                <option value="Residential High-Value">Residential High-Value</option>
-                <option value="Warehouse & Logistics">Warehouse & Logistics</option>
-                <option value="Energy & Marine">Energy & Marine</option>
+                <optgroup label="Core Lines of Business (LOB)">
+                  <option value="Motor">Motor</option>
+                  <option value="P&C Lines">P&C Lines</option>
+                  <option value="Medical Lines">Medical Lines</option>
+                  <option value="Group Life Lines">Group Life Lines</option>
+                </optgroup>
+                <optgroup label="Specialized Sub-Lines">
+                  <option value="Commercial Property">Commercial Property</option>
+                  <option value="Industrial Plant">Industrial Plant</option>
+                  <option value="Residential High-Value">Residential High-Value</option>
+                  <option value="Warehouse & Logistics">Warehouse & Logistics</option>
+                  <option value="Energy & Marine">Energy & Marine</option>
+                </optgroup>
               </select>
             </div>
           </div>

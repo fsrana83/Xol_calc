@@ -13,9 +13,27 @@ import {
   Settings2,
   Workflow,
   Sparkles,
+  Car,
+  Building2,
+  HeartPulse,
+  Users2,
+  Check,
+  X,
 } from 'lucide-react';
-import { TreatyConfig, InuringOrder } from '../types/reinsurance';
-import { DEFAULT_TREATY_CONFIG, formatCurrency } from '../utils/reinsuranceEngine';
+import {
+  TreatyConfig,
+  InuringOrder,
+  CoreLineOfBusiness,
+  LobTreatyConfig,
+  LobTreatyMap,
+} from '../types/reinsurance';
+import {
+  DEFAULT_TREATY_CONFIG,
+  formatCurrency,
+  CORE_LOBS,
+  DEFAULT_LOB_TREATIES,
+  getLobConfig,
+} from '../utils/reinsuranceEngine';
 
 interface StreamlitSidebarProps {
   treaties: TreatyConfig;
@@ -31,11 +49,45 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
   isOpen,
   onToggle,
 }) => {
-  const [qsExpanded, setQsExpanded] = useState(true);
-  const [riskExpanded, setRiskExpanded] = useState(true);
-  const [catExpanded, setCatExpanded] = useState(true);
-  const [aslExpanded, setAslExpanded] = useState(true);
+  const [lobExpanded, setLobExpanded] = useState(true);
+  const [qsExpanded, setQsExpanded] = useState(false);
+  const [riskExpanded, setRiskExpanded] = useState(false);
+  const [catExpanded, setCatExpanded] = useState(false);
+  const [aslExpanded, setAslExpanded] = useState(false);
   const [inuringExpanded, setInuringExpanded] = useState(false);
+
+  const currentLobTreaties: LobTreatyMap = treaties.lobTreaties || DEFAULT_LOB_TREATIES;
+
+  const toggleLobTreaty = (lob: CoreLineOfBusiness, treatyKey: keyof LobTreatyConfig) => {
+    const prev = getLobConfig(lob, currentLobTreaties);
+    const updated: LobTreatyMap = {
+      ...currentLobTreaties,
+      [lob]: {
+        ...prev,
+        [treatyKey]: !prev[treatyKey],
+      },
+    };
+    onUpdateTreaties({
+      ...treaties,
+      lobTreaties: updated,
+    });
+  };
+
+  const setLobAllTreaties = (lob: CoreLineOfBusiness, enable: boolean) => {
+    const updated: LobTreatyMap = {
+      ...currentLobTreaties,
+      [lob]: {
+        quotaShare: enable,
+        riskXol: enable,
+        catXol: enable,
+        aggregateStopLoss: enable,
+      },
+    };
+    onUpdateTreaties({
+      ...treaties,
+      lobTreaties: updated,
+    });
+  };
 
   const updateQuotaShare = (fields: Partial<TreatyConfig['quotaShare']>) => {
     onUpdateTreaties({
@@ -81,9 +133,9 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
       <button
         onClick={onToggle}
         title="Open Sidebar"
-        className="fixed top-16 left-2 z-40 p-2.5 bg-white border border-slate-200 rounded-lg shadow-md hover:bg-slate-50 text-slate-700 transition-all flex items-center gap-1.5 text-xs font-semibold"
+        className="fixed top-16 left-2 z-40 p-2.5 bg-white border border-slate-200 rounded-lg shadow-md hover:bg-slate-50 text-slate-700 transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
       >
-        <Sliders className="w-4 h-4 text-[#ff4b4b]" />
+        <Sliders className="w-4 h-4 text-indigo-600" />
         <span>Treaty Controls</span>
       </button>
     );
@@ -94,26 +146,26 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
       {/* Sidebar Header */}
       <div className="p-4 border-b border-[#e6e9ef] bg-white flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded bg-[#ff4b4b]/10 text-[#ff4b4b] flex items-center justify-center font-bold">
+          <div className="w-7 h-7 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
             <Sliders className="w-4 h-4" />
           </div>
           <div>
             <h2 className="text-sm font-bold text-slate-900 tracking-tight">Treaty Architecture</h2>
-            <p className="text-[11px] text-slate-500 font-mono">Streamlit Parameters</p>
+            <p className="text-[11px] text-slate-500 font-mono">Actuarial Parameters</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={resetToDefaultTreaties}
             title="Reset to User Defaults (80% QS, 40K Risk, 2M Cat)"
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onToggle}
             title="Collapse Sidebar"
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition cursor-pointer"
           >
             <span className="text-xs font-mono font-bold">✕</span>
           </button>
@@ -134,6 +186,122 @@ export const StreamlitSidebar: React.FC<StreamlitSidebarProps> = ({
             <li><b>Cat XOL:</b> Limit {formatCurrency(2000000)} xs {formatCurrency(200000)}</li>
             <li><b>Aggregate Stop-Loss:</b> Limit {formatCurrency(treaties.aggregateStopLoss?.limit || 600000)} xs {formatCurrency(treaties.aggregateStopLoss?.attachmentPoint || 400000)}</li>
           </ul>
+        </div>
+
+        {/* LOB TREATY SETUP CONTROL SECTION */}
+        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
+          <div
+            onClick={() => setLobExpanded(!lobExpanded)}
+            className="p-3 bg-gradient-to-r from-slate-50 to-indigo-50/30 flex items-center justify-between cursor-pointer hover:bg-slate-100/80 transition"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+              <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                LOB Treaty Setup & Attachment
+              </span>
+            </div>
+            {lobExpanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+          </div>
+
+          {lobExpanded && (
+            <div className="p-3 space-y-3 text-xs bg-white">
+              <p className="text-[11px] text-slate-500">
+                Enable or disable treaty types per Line of Business (LOB).
+              </p>
+
+              <div className="space-y-2">
+                {CORE_LOBS.map((lob) => {
+                  const cfg = getLobConfig(lob, currentLobTreaties);
+                  const activeCount = [cfg.quotaShare, cfg.riskXol, cfg.catXol, cfg.aggregateStopLoss].filter(Boolean).length;
+
+                  let LobIcon = Car;
+                  let iconColor = 'text-sky-600 bg-sky-50';
+                  if (lob === 'P&C Lines') {
+                    LobIcon = Building2;
+                    iconColor = 'text-amber-600 bg-amber-50';
+                  } else if (lob === 'Medical Lines') {
+                    LobIcon = HeartPulse;
+                    iconColor = 'text-emerald-600 bg-emerald-50';
+                  } else if (lob === 'Group Life Lines') {
+                    LobIcon = Users2;
+                    iconColor = 'text-purple-600 bg-purple-50';
+                  }
+
+                  return (
+                    <div key={lob} className="p-2 bg-slate-50 border border-slate-200 rounded-md">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`p-1 rounded ${iconColor}`}>
+                            <LobIcon className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="font-bold text-slate-800 text-[11px]">{lob}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {activeCount}/4 Active
+                          </span>
+                          <button
+                            onClick={() => setLobAllTreaties(lob, activeCount < 4)}
+                            className="text-[9px] font-semibold text-indigo-600 hover:underline px-1 cursor-pointer"
+                          >
+                            {activeCount < 4 ? 'All' : 'Clear'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 4 Treaty Toggle Chips */}
+                      <div className="grid grid-cols-4 gap-1">
+                        <button
+                          onClick={() => toggleLobTreaty(lob, 'quotaShare')}
+                          title={`Quota Share for ${lob}: ${cfg.quotaShare ? 'Enabled' : 'Disabled'}`}
+                          className={`py-1 text-[10px] font-bold rounded text-center transition cursor-pointer border ${
+                            cfg.quotaShare
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          QS
+                        </button>
+                        <button
+                          onClick={() => toggleLobTreaty(lob, 'riskXol')}
+                          title={`Risk XOL for ${lob}: ${cfg.riskXol ? 'Enabled' : 'Disabled'}`}
+                          className={`py-1 text-[10px] font-bold rounded text-center transition cursor-pointer border ${
+                            cfg.riskXol
+                              ? 'bg-amber-600 text-white border-amber-600'
+                              : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          Risk
+                        </button>
+                        <button
+                          onClick={() => toggleLobTreaty(lob, 'catXol')}
+                          title={`Cat XOL for ${lob}: ${cfg.catXol ? 'Enabled' : 'Disabled'}`}
+                          className={`py-1 text-[10px] font-bold rounded text-center transition cursor-pointer border ${
+                            cfg.catXol
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          Cat
+                        </button>
+                        <button
+                          onClick={() => toggleLobTreaty(lob, 'aggregateStopLoss')}
+                          title={`Stop-Loss (ASL) for ${lob}: ${cfg.aggregateStopLoss ? 'Enabled' : 'Disabled'}`}
+                          className={`py-1 text-[10px] font-bold rounded text-center transition cursor-pointer border ${
+                            cfg.aggregateStopLoss
+                              ? 'bg-emerald-600 text-white border-emerald-600'
+                              : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          ASL
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 1. QUOTA SHARE TREATY SECTION */}

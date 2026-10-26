@@ -47,7 +47,15 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
           item.claim.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
           item.claim.eventName.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesLob = selectedLob === 'ALL' || item.claim.lob === selectedLob;
+        const matchesLob =
+          selectedLob === 'ALL' ||
+          item.claim.lob === selectedLob ||
+          (selectedLob === 'P&C Lines' &&
+            (item.claim.lob === 'Commercial Property' ||
+              item.claim.lob === 'Industrial Plant' ||
+              item.claim.lob === 'Residential High-Value' ||
+              item.claim.lob === 'Warehouse & Logistics' ||
+              item.claim.lob === 'Energy & Marine'));
 
         return matchesSearch && matchesLob;
       })
@@ -202,14 +210,22 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
           <select
             value={selectedLob}
             onChange={(e) => setSelectedLob(e.target.value)}
-            className="w-full py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#ff4b4b]"
+            className="w-full py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600 font-medium"
           >
             <option value="ALL">All Lines of Business (LOB)</option>
-            <option value="Commercial Property">Commercial Property</option>
-            <option value="Industrial Plant">Industrial Plant</option>
-            <option value="Residential High-Value">Residential High-Value</option>
-            <option value="Warehouse & Logistics">Warehouse & Logistics</option>
-            <option value="Energy & Marine">Energy & Marine</option>
+            <optgroup label="Core LOBs">
+              <option value="Motor">Motor</option>
+              <option value="P&C Lines">P&C Lines (All Property & Casualty)</option>
+              <option value="Medical Lines">Medical Lines</option>
+              <option value="Group Life Lines">Group Life Lines</option>
+            </optgroup>
+            <optgroup label="Granular Sub-Lines">
+              <option value="Commercial Property">Commercial Property</option>
+              <option value="Industrial Plant">Industrial Plant</option>
+              <option value="Residential High-Value">Residential High-Value</option>
+              <option value="Warehouse & Logistics">Warehouse & Logistics</option>
+              <option value="Energy & Marine">Energy & Marine</option>
+            </optgroup>
           </select>
         </div>
 
@@ -297,7 +313,21 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
 
                     {/* LOB & Event */}
                     <td className="py-2 px-3 font-sans">
-                      <div className="text-[11px] text-slate-800">{item.claim.lob}</div>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span
+                          className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                            item.claim.lob === 'Motor'
+                              ? 'bg-sky-50 text-sky-700 border-sky-200'
+                              : item.claim.lob === 'Medical Lines'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : item.claim.lob === 'Group Life Lines'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : 'bg-amber-50 text-amber-800 border-amber-200'
+                          }`}
+                        >
+                          {item.claim.lob}
+                        </span>
+                      </div>
                       <div className="text-[10px] text-indigo-600 truncate max-w-[130px]">
                         {item.claim.eventName}
                       </div>

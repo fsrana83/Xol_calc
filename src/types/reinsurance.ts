@@ -32,12 +32,36 @@ export interface AggregateStopLossTreaty {
 
 export type InuringOrder = 'QS_FIRST' | 'RISK_XOL_FIRST';
 
+export type CoreLineOfBusiness =
+  | 'Motor'
+  | 'P&C Lines'
+  | 'Medical Lines'
+  | 'Group Life Lines';
+
+export type LineOfBusiness =
+  | CoreLineOfBusiness
+  | 'Commercial Property'
+  | 'Industrial Plant'
+  | 'Residential High-Value'
+  | 'Energy & Marine'
+  | 'Warehouse & Logistics';
+
+export interface LobTreatyConfig {
+  quotaShare: boolean;
+  riskXol: boolean;
+  catXol: boolean;
+  aggregateStopLoss: boolean;
+}
+
+export type LobTreatyMap = Record<string, LobTreatyConfig>;
+
 export interface TreatyConfig {
   quotaShare: QuotaShareTreaty;
   riskXol: RiskXolTreaty;
   catXol: CatXolTreaty;
   aggregateStopLoss: AggregateStopLossTreaty;
   inuringOrder: InuringOrder;
+  lobTreaties?: LobTreatyMap;
 }
 
 export interface Claim {
@@ -45,7 +69,7 @@ export interface Claim {
   claimNumber: string;
   policyNumber: string;
   insuredName: string;
-  lob: 'Commercial Property' | 'Industrial Plant' | 'Residential High-Value' | 'Energy & Marine' | 'Warehouse & Logistics';
+  lob: LineOfBusiness;
   location: string;
   grossLoss: number;
   eventId: string; // Grouping key for Catastrophe events (e.g. "CAT-HURRICANE", "NON-CAT")
@@ -114,6 +138,9 @@ export interface ScenarioPreset {
   id: string;
   title: string;
   description: string;
-  category: 'Catastrophe' | 'Per-Risk Shock' | 'Attritional / Normal' | 'Mixed Multi-Event';
+  category: 'Catastrophe' | 'Per-Risk Shock' | 'Attritional / Normal' | 'Mixed Multi-Event' | 'Custom';
   claims: Claim[];
+  isCustom?: boolean;
+  createdAt?: string;
+  lastModified?: string;
 }

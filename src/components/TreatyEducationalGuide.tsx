@@ -120,6 +120,41 @@ export const TreatyEducationalGuide: React.FC = () => {
         </div>
       </div>
 
+      {/* LOB Architecture Section */}
+      <div className="st-card p-5">
+        <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+          <Workflow className="w-4 h-4 text-indigo-600" />
+          <span>Line of Business (LOB) Treaty Architecture & Market Standard</span>
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div className="p-3 bg-sky-50/60 rounded-lg border border-sky-200">
+            <span className="font-bold text-sky-900">Motor Lines:</span>
+            <p className="text-slate-700 mt-1">
+              • <b>Risk XOL:</b> Capping severe individual bodily injury / TPL awards at &#x20c4; 40k.
+              <br />• <b>Cat XOL:</b> Protecting dealership fleet submergence from wadi flash floods.
+            </p>
+          </div>
+          <div className="p-3 bg-amber-50/60 rounded-lg border border-amber-200">
+            <span className="font-bold text-amber-900">P&C Lines:</span>
+            <p className="text-slate-700 mt-1">
+              • <b>All 4 Tiers:</b> Quota share capacity, per-risk property fire capping, cyclone cat pooling, and ASL capital preservation.
+            </p>
+          </div>
+          <div className="p-3 bg-emerald-50/60 rounded-lg border border-emerald-200">
+            <span className="font-bold text-emerald-900">Medical Lines:</span>
+            <p className="text-slate-700 mt-1">
+              • <b>QS & ASL:</b> Health insurance excludes property Cat XOL. Capacity is driven by QS, and loss ratio overrun is absorbed by ASL.
+            </p>
+          </div>
+          <div className="p-3 bg-purple-50/60 rounded-lg border border-purple-200">
+            <span className="font-bold text-purple-900">Group Life Lines:</span>
+            <p className="text-slate-700 mt-1">
+              • <b>Life XOL & Clash:</b> Strict per-life limit (&#x20c4; 40k) with Cat XOL covering multi-death workforce transit or platform accidents.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Actuarial Glossary */}
       <div className="st-card p-5">
         <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
