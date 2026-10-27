@@ -27,6 +27,7 @@ import { ScenarioComparison } from './components/ScenarioComparison';
 import { AddClaimModal } from './components/AddClaimModal';
 import { BulkUploadClaimsModal } from './components/BulkUploadClaimsModal';
 import { SaveScenarioModal } from './components/SaveScenarioModal';
+import { ShareScenarioModal } from './components/ShareScenarioModal';
 import { TreatyEducationalGuide } from './components/TreatyEducationalGuide';
 import { LossDistributionHistogram } from './components/LossDistributionHistogram';
 import { StressTestingWorkbench } from './components/StressTestingWorkbench';
@@ -94,6 +95,7 @@ export default function App() {
   >('overview');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState<boolean>(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -104,6 +106,38 @@ export default function App() {
       setNotification((curr) => (curr === msg ? null : curr));
     }, 3500);
   };
+
+  // Detect shared deep-link parameters on initial load
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sharedScenarioId = params.get('scenario') || params.get('scenarioId');
+      if (sharedScenarioId) {
+        const matched = scenarios.find((s) => s.id === sharedScenarioId);
+        if (matched) {
+          setActiveScenarioId(sharedScenarioId);
+          notify(`Deep-Link: Loaded shared scenario "${matched.title}"`);
+        }
+      }
+      // Support treaty parameter overrides from deep-link
+      const qs = params.get('qs');
+      const rxol = params.get('rxol');
+      const cxol = params.get('cxol');
+      const asl = params.get('asl');
+      if (qs || rxol || cxol || asl) {
+        setTreaties((prev) => ({
+          ...prev,
+          quotaShare: qs ? { ...prev.quotaShare, retentionPercent: Number(qs) || prev.quotaShare.retentionPercent } : prev.quotaShare,
+          riskXol: rxol ? { ...prev.riskXol, limit: Number(rxol) || prev.riskXol.limit } : prev.riskXol,
+          catXol: cxol ? { ...prev.catXol, limit: Number(cxol) || prev.catXol.limit } : prev.catXol,
+          aggregateStopLoss: asl ? { ...prev.aggregateStopLoss, limit: Number(asl) || prev.aggregateStopLoss.limit } : prev.aggregateStopLoss,
+        }));
+      }
+    } catch (e) {
+      // Ignore URL parsing errors
+    }
+  }, []);
 
   // Active scenario and its claims
   const activeScenario = useMemo(() => {
@@ -388,6 +422,7 @@ export default function App() {
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onOpenBulkUploadModal={() => setIsBulkUploadModalOpen(true)}
         onOpenSaveModal={() => setIsSaveModalOpen(true)}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
         onResetScenarios={handleResetScenarios}
         lastSavedTime={lastSavedTime}
         onGenerateRandomEvent={handleGenerateRandomEvent}
@@ -753,6 +788,16 @@ export default function App() {
         activeScenarioTitle={activeScenario.title}
         activeScenarioClaimCount={activeScenario.claims.length}
         activeEventId={activeScenario.claims[0]?.eventId || 'CAT-IMPORT'}
+      />
+
+      {/* Share Scenario Deep-Link Modal */}
+      <ShareScenarioModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        scenario={activeScenario}
+        treaties={treaties}
+        summary={summary}
+        onNotify={notify}
       />
     </div>
   );

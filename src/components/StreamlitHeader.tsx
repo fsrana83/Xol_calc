@@ -14,6 +14,7 @@ import {
   BookmarkPlus,
   Upload,
   FileSpreadsheet,
+  Share2,
 } from 'lucide-react';
 
 interface StreamlitHeaderProps {
@@ -24,6 +25,7 @@ interface StreamlitHeaderProps {
   isSidebarOpen: boolean;
   onOpenAddModal: () => void;
   onOpenBulkUploadModal?: () => void;
+  onOpenShareModal?: () => void;
   onGenerateRandomEvent: () => void;
   onGenerateWorstCase: () => void;
   onExportPdf: () => void;
@@ -42,6 +44,7 @@ export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
   isSidebarOpen,
   onOpenAddModal,
   onOpenBulkUploadModal,
+  onOpenShareModal,
   onGenerateRandomEvent,
   onGenerateWorstCase,
   onExportPdf,
@@ -122,6 +125,18 @@ export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
             >
               <BookmarkPlus className="w-3.5 h-3.5 text-indigo-600" />
               <span className="hidden sm:inline">Save Preset</span>
+            </button>
+          )}
+
+          {/* Share Scenario Deep-Link Button */}
+          {onOpenShareModal && (
+            <button
+              onClick={onOpenShareModal}
+              className="px-2.5 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 rounded-md text-xs font-semibold shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+              title="Generate temporary shareable deep-link URL for stakeholders"
+            >
+              <Share2 className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">Share</span>
             </button>
           )}
 
