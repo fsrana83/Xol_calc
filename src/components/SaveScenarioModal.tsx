@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { ScenarioPreset, Claim } from '../types/reinsurance';
 import { formatCurrency } from '../utils/reinsuranceEngine';
-import { X, Save, BookmarkCheck, Sparkles, Layers } from 'lucide-react';
+import { X, Save, BookmarkCheck } from 'lucide-react';
 
 interface SaveScenarioModalProps {
   isOpen: boolean;
@@ -36,7 +36,6 @@ export const SaveScenarioModal: React.FC<SaveScenarioModalProps> = ({
     if (!title.trim()) return;
 
     const newScenarioId = `custom-${Date.now()}`;
-    // Deep copy claims with new IDs so they are decoupled
     const duplicatedClaims: Claim[] = currentScenario.claims.map((c, idx) => ({
       ...c,
       id: `CLM-${newScenarioId}-${idx + 1}`,
@@ -73,7 +72,7 @@ export const SaveScenarioModal: React.FC<SaveScenarioModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/60 transition"
+            className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -81,7 +80,6 @@ export const SaveScenarioModal: React.FC<SaveScenarioModalProps> = ({
 
         {/* Content & Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Current Base Snapshot Info */}
           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs flex justify-between items-center">
             <span className="text-slate-600">
               Cloning <strong>{currentScenario.claims.length} claims</strong> from base:
@@ -142,18 +140,17 @@ export const SaveScenarioModal: React.FC<SaveScenarioModalProps> = ({
             </span>
           </div>
 
-          {/* Action buttons */}
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-md transition"
+              className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-md transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-xs transition flex items-center gap-1.5"
+              className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-xs transition flex items-center gap-1.5 cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>Save to LocalStorage</span>

@@ -74,14 +74,16 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span
                     className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wide ${
-                      scenario.category === 'Catastrophe'
+                      scenario.isCustom || scenario.category === 'Custom'
+                        ? 'bg-purple-100 text-purple-800'
+                        : scenario.category === 'Catastrophe'
                         ? 'bg-rose-100 text-rose-800'
                         : scenario.category === 'Per-Risk Shock'
                         ? 'bg-amber-100 text-amber-800'
                         : 'bg-emerald-100 text-emerald-800'
                     }`}
                   >
-                    {scenario.category}
+                    {scenario.isCustom ? '★ Custom Saved' : scenario.category}
                   </span>
                   {isActive && (
                     <span className="text-[10px] font-bold text-[#ff4b4b] flex items-center gap-1 font-mono">

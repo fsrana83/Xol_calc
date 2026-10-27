@@ -11,6 +11,9 @@ import {
   Activity,
   Download,
   ShieldAlert,
+  BookmarkPlus,
+  Upload,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface StreamlitHeaderProps {
@@ -20,10 +23,15 @@ interface StreamlitHeaderProps {
   onToggleSidebar: () => void;
   isSidebarOpen: boolean;
   onOpenAddModal: () => void;
+  onOpenBulkUploadModal?: () => void;
   onGenerateRandomEvent: () => void;
   onGenerateWorstCase: () => void;
   onExportPdf: () => void;
   isExportingPdf?: boolean;
+  onExportCsv?: () => void;
+  onOpenSaveModal?: () => void;
+  onResetScenarios?: () => void;
+  lastSavedTime?: string | null;
 }
 
 export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
@@ -33,10 +41,15 @@ export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
   onToggleSidebar,
   isSidebarOpen,
   onOpenAddModal,
+  onOpenBulkUploadModal,
   onGenerateRandomEvent,
   onGenerateWorstCase,
   onExportPdf,
   isExportingPdf = false,
+  onExportCsv,
+  onOpenSaveModal,
+  onResetScenarios,
+  lastSavedTime,
 }) => {
   const activeScenario = scenarios.find((s) => s.id === activeScenarioId);
 
@@ -73,7 +86,16 @@ export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
 
         {/* Right Action Bar: Scenario Selector & Quick Actions */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Streamlit Scenario Selectbox */}
+          {/* LocalStorage Sync Badge */}
+          <div
+            className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 border border-slate-200 text-[10px] text-slate-500 font-mono"
+            title={`Scenarios are saved to browser LocalStorage automatically.${lastSavedTime ? ` Last synced: ${lastSavedTime}` : ''}`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>LocalStorage</span>
+          </div>
+
+          {/* Scenario Selectbox */}
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider font-mono">
               Scenario:
@@ -81,31 +103,67 @@ export const StreamlitHeader: React.FC<StreamlitHeaderProps> = ({
             <select
               value={activeScenarioId}
               onChange={(e) => onSelectScenario(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer pr-2"
+              className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer pr-2 max-w-[200px] sm:max-w-xs truncate"
             >
               {scenarios.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.title}
+                  {s.isCustom ? `★ [Custom] ${s.title}` : s.title}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Save As Custom Scenario Preset */}
+          {onOpenSaveModal && (
+            <button
+              onClick={onOpenSaveModal}
+              className="px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-md text-xs font-semibold shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+              title="Save current modified claims as a permanent custom scenario preset in LocalStorage"
+            >
+              <BookmarkPlus className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">Save Preset</span>
+            </button>
+          )}
+
           {/* Export PDF Report Button */}
           <button
             onClick={onExportPdf}
             disabled={isExportingPdf}
-            className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition disabled:opacity-50"
+            className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition disabled:opacity-50 cursor-pointer"
             title="Download executive PDF summary and waterfall report"
           >
             <Download className="w-3.5 h-3.5 text-emerald-400" />
             <span>{isExportingPdf ? 'Exporting...' : 'Export PDF'}</span>
           </button>
 
+          {/* Export CSV Ledger Button */}
+          {onExportCsv && (
+            <button
+              onClick={onExportCsv}
+              className="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+              title="Download full claim ledger with Gross, QS, Risk XOL, Cat XOL, ASL, and Net breakdown to CSV"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </button>
+          )}
+
+          {/* Bulk Upload CSV */}
+          {onOpenBulkUploadModal && (
+            <button
+              onClick={onOpenBulkUploadModal}
+              className="px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-md text-xs font-semibold shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+              title="Bulk upload multiple claims from a CSV file"
+            >
+              <Upload className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">Bulk Upload</span>
+            </button>
+          )}
+
           {/* Quick Add Claim */}
           <button
             onClick={onOpenAddModal}
-            className="px-2.5 py-1.5 bg-[#ff4b4b] hover:bg-[#ff3333] text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+            className="px-2.5 py-1.5 bg-[#ff4b4b] hover:bg-[#ff3333] text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
             title="Add a custom claim to the scenario"
           >
             <Plus className="w-3.5 h-3.5" />

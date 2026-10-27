@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DEFAULT_SCENARIOS } from './data/defaultScenarios';
 import {
   TreatyConfig,
@@ -25,13 +25,29 @@ import { ClaimLedgerTable } from './components/ClaimLedgerTable';
 import { SensitivityMatrix } from './components/SensitivityMatrix';
 import { ScenarioComparison } from './components/ScenarioComparison';
 import { AddClaimModal } from './components/AddClaimModal';
+import { BulkUploadClaimsModal } from './components/BulkUploadClaimsModal';
+import { SaveScenarioModal } from './components/SaveScenarioModal';
 import { TreatyEducationalGuide } from './components/TreatyEducationalGuide';
 import { LossDistributionHistogram } from './components/LossDistributionHistogram';
 import { StressTestingWorkbench } from './components/StressTestingWorkbench';
 import { UseCasesSheet } from './components/UseCasesSheet';
 import { LobTreatySetup } from './components/LobTreatySetup';
+import { LobAggregateLimitThreatMonitor } from './components/LobAggregateLimitThreatMonitor';
+import { PortfolioTrends } from './components/PortfolioTrends';
+import { GeospatialClaimsImpact } from './components/GeospatialClaimsImpact';
 import { generateReinsurancePdfReport } from './utils/pdfReportGenerator';
+import { exportScenarioClaimLedgerToCsv } from './utils/csvLedgerExporter';
 import { generateWorstCaseScenario } from './utils/worstCaseGenerator';
+import {
+  loadSavedScenarios,
+  saveScenariosToStorage,
+  loadSavedActiveScenarioId,
+  saveActiveScenarioIdToStorage,
+  loadSavedTreaties,
+  saveTreatiesToStorage,
+  getLastSavedTimestamp,
+  resetScenariosStorage,
+} from './utils/scenarioStorage';
 import {
   BarChart3,
   FileSpreadsheet,
@@ -46,20 +62,27 @@ import {
   Zap,
   FileText,
   Shield,
+  MapPin,
 } from 'lucide-react';
 
 export default function App() {
-  // Treaties configuration state
-  const [treaties, setTreaties] = useState<TreatyConfig>(DEFAULT_TREATY_CONFIG);
+  // Treaties configuration state initialized from LocalStorage
+  const [treaties, setTreaties] = useState<TreatyConfig>(() => loadSavedTreaties());
 
-  // Scenarios state
-  const [scenarios, setScenarios] = useState<ScenarioPreset[]>(DEFAULT_SCENARIOS);
-  const [activeScenarioId, setActiveScenarioId] = useState<string>(DEFAULT_SCENARIOS[0].id);
+  // Scenarios state initialized from LocalStorage
+  const [scenarios, setScenarios] = useState<ScenarioPreset[]>(() => loadSavedScenarios());
+  const [activeScenarioId, setActiveScenarioId] = useState<string>(() => {
+    const loaded = loadSavedScenarios();
+    return loadSavedActiveScenarioId(loaded);
+  });
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(() => getLastSavedTimestamp());
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState<boolean>(false);
 
   // UI state
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<
     | 'overview'
+    | 'geospatial'
     | 'lob-setup'
     | 'ledger'
     | 'distribution'
@@ -70,6 +93,7 @@ export default function App() {
     | 'guide'
   >('overview');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState<boolean>(false);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -154,6 +178,29 @@ export default function App() {
       })
     );
     notify(`Added new claim: ${newClaim.insuredName} (${formatCurrency(newClaim.grossLoss)})`);
+  };
+
+  const handleBulkUploadClaims = (newClaims: Claim[], mode: 'append' | 'replace') => {
+    if (!newClaims || newClaims.length === 0) return;
+
+    const totalBatchLoss = newClaims.reduce((sum, c) => sum + c.grossLoss, 0);
+
+    setScenarios((prev) =>
+      prev.map((sc) => {
+        if (sc.id !== activeScenarioId) return sc;
+        return {
+          ...sc,
+          claims: mode === 'append' ? [...newClaims, ...sc.claims] : newClaims,
+          lastModified: new Date().toISOString(),
+        };
+      })
+    );
+
+    notify(
+      mode === 'append'
+        ? `Added ${newClaims.length} bulk claims to scenario (Total: ${formatCurrency(totalBatchLoss)})`
+        : `Replaced scenario with ${newClaims.length} imported claims (Total: ${formatCurrency(totalBatchLoss)})`
+    );
   };
 
   // Generate randomized catastrophe portfolio
@@ -243,6 +290,22 @@ export default function App() {
     }
   };
 
+  const handleExportCsv = () => {
+    try {
+      const result = exportScenarioClaimLedgerToCsv({
+        scenarioTitle: activeScenario.title,
+        claimBreakdowns: summary.claimBreakdowns,
+        treaties,
+      });
+      notify(
+        `Exported ${result.rowCount} claims ledger with all breakdown columns to CSV (${formatCurrency(result.totalGrossLoss)} gross loss)`
+      );
+    } catch (err) {
+      console.error('Failed to export CSV:', err);
+      notify('Failed to export CSV. Please try again.');
+    }
+  };
+
   const handleApplyShockToScenario = (shockPercent: number) => {
     const factor = 1 + shockPercent / 100;
     setScenarios((prev) =>
@@ -272,6 +335,39 @@ export default function App() {
     );
   };
 
+  // Auto-sync scenarios to LocalStorage whenever they change
+  useEffect(() => {
+    saveScenariosToStorage(scenarios);
+    setLastSavedTime(getLastSavedTimestamp());
+  }, [scenarios]);
+
+  // Auto-sync active scenario ID to LocalStorage
+  useEffect(() => {
+    saveActiveScenarioIdToStorage(activeScenarioId);
+  }, [activeScenarioId]);
+
+  // Auto-sync treaty config to LocalStorage
+  useEffect(() => {
+    saveTreatiesToStorage(treaties);
+  }, [treaties]);
+
+  // Save current scenario as a new custom preset in LocalStorage
+  const handleSaveAsNewScenario = (newPreset: ScenarioPreset) => {
+    setScenarios((prev) => [newPreset, ...prev]);
+    setActiveScenarioId(newPreset.id);
+    notify(`Saved custom scenario "${newPreset.title}" to LocalStorage!`);
+  };
+
+  // Reset scenarios and treaties to default factory settings
+  const handleResetScenarios = () => {
+    resetScenariosStorage();
+    setScenarios(DEFAULT_SCENARIOS);
+    setActiveScenarioId(DEFAULT_SCENARIOS[0].id);
+    setTreaties(DEFAULT_TREATY_CONFIG);
+    setLastSavedTime(null);
+    notify('Reset all scenarios and treaties to default factory settings.');
+  };
+
   return (
     <div className="min-h-screen bg-[#fafbfc] text-[#31333f] flex flex-col font-sans">
       {/* Toast Notification */}
@@ -282,7 +378,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Streamlit Top Header */}
+      {/* Reinsurance Simulator Top Header */}
       <StreamlitHeader
         scenarios={scenarios}
         activeScenarioId={activeScenarioId}
@@ -290,10 +386,15 @@ export default function App() {
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
         onOpenAddModal={() => setIsAddModalOpen(true)}
+        onOpenBulkUploadModal={() => setIsBulkUploadModalOpen(true)}
+        onOpenSaveModal={() => setIsSaveModalOpen(true)}
+        onResetScenarios={handleResetScenarios}
+        lastSavedTime={lastSavedTime}
         onGenerateRandomEvent={handleGenerateRandomEvent}
         onGenerateWorstCase={handleGenerateWorstCase}
         onExportPdf={handleExportPdf}
         isExportingPdf={isExportingPdf}
+        onExportCsv={handleExportCsv}
       />
 
       {/* Main Workspace Layout */}
@@ -360,6 +461,18 @@ export default function App() {
             >
               <BarChart3 className="w-4 h-4" />
               <span>Loss Waterfall & Towers</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('geospatial')}
+              className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'geospatial'
+                  ? 'border-indigo-600 text-indigo-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <MapPin className="w-4 h-4 text-rose-500" />
+              <span>Geospatial Impact Map</span>
             </button>
 
             <button
@@ -497,12 +610,46 @@ export default function App() {
                   >
                     Configure Matrix →
                   </button>
+                  <button
+                    onClick={() => setActiveTab('geospatial')}
+                    className="ml-1 px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer"
+                    title="Launch Geospatial Catastrophe Hotspots Map"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Catastrophe Map Hotspots →</span>
+                  </button>
                 </div>
               </div>
+
+              {/* LOB Aggregate Limit Threat Monitor & Color-Coded Warning System */}
+              <LobAggregateLimitThreatMonitor
+                claims={activeScenario.claims}
+                treaties={treaties}
+                summary={summary}
+                onUpdateClaimLoss={handleUpdateClaimLoss}
+                onNavigateToLobSetup={() => setActiveTab('lob-setup')}
+              />
+
+              {/* Portfolio Trends: Month-over-Month Frequency & Severity Line Chart */}
+              <PortfolioTrends
+                claims={activeScenario.claims}
+                treaties={treaties}
+                summary={summary}
+              />
 
               <WaterfallChart summary={summary} onExportPdf={handleExportPdf} />
               <TreatyTowerVisualizer treaties={treaties} summary={summary} />
             </div>
+          )}
+
+          {/* Tab: Geospatial Claims Impact & Catastrophe Hotspot Radar */}
+          {activeTab === 'geospatial' && (
+            <GeospatialClaimsImpact
+              claims={activeScenario.claims}
+              treaties={treaties}
+              summary={summary}
+              scenarioTitle={activeScenario.title}
+            />
           )}
 
           {/* Tab: LOB Treaty Setup Matrix */}
@@ -519,9 +666,15 @@ export default function App() {
             <ClaimLedgerTable
               claimBreakdowns={summary.claimBreakdowns}
               onAddClaim={() => setIsAddModalOpen(true)}
+              onBulkUploadClick={() => setIsBulkUploadModalOpen(true)}
               onUpdateClaimLoss={handleUpdateClaimLoss}
               onDeleteClaim={handleDeleteClaim}
               onDuplicateClaim={handleDuplicateClaim}
+              treaties={treaties}
+              scenarioTitle={activeScenario.title}
+              onExportSuccess={(count) =>
+                notify(`Exported ${count} claims ledger to CSV (${activeScenario.title})`)
+              }
             />
           )}
 
@@ -582,6 +735,24 @@ export default function App() {
         onAddClaim={handleAddClaim}
         activeEventName={activeScenario.title}
         activeEventId={activeScenario.claims[0]?.eventId || 'EVENT-ACTIVE'}
+      />
+
+      {/* Save Custom Scenario Preset Modal */}
+      <SaveScenarioModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        currentScenario={activeScenario}
+        onSaveAsNewScenario={handleSaveAsNewScenario}
+      />
+
+      {/* Bulk Upload Claims (CSV) Modal */}
+      <BulkUploadClaimsModal
+        isOpen={isBulkUploadModalOpen}
+        onClose={() => setIsBulkUploadModalOpen(false)}
+        onImportClaims={handleBulkUploadClaims}
+        activeScenarioTitle={activeScenario.title}
+        activeScenarioClaimCount={activeScenario.claims.length}
+        activeEventId={activeScenario.claims[0]?.eventId || 'CAT-IMPORT'}
       />
     </div>
   );

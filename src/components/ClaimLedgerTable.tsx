@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Claim, ClaimCalculation } from '../types/reinsurance';
+import { Claim, ClaimCalculation, TreatyConfig } from '../types/reinsurance';
 import { formatCurrency, formatPercent } from '../utils/reinsuranceEngine';
+import { exportScenarioClaimLedgerToCsv } from '../utils/csvLedgerExporter';
 import {
   Search,
   Filter,
@@ -13,22 +14,31 @@ import {
   Check,
   X,
   FileSpreadsheet,
+  Upload,
 } from 'lucide-react';
 
 interface ClaimLedgerTableProps {
   claimBreakdowns: ClaimCalculation[];
   onAddClaim: () => void;
+  onBulkUploadClick?: () => void;
   onUpdateClaimLoss: (claimId: string, newGross: number) => void;
   onDeleteClaim: (claimId: string) => void;
   onDuplicateClaim: (claimId: string) => void;
+  treaties?: TreatyConfig;
+  scenarioTitle?: string;
+  onExportSuccess?: (count: number) => void;
 }
 
 export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
   claimBreakdowns,
   onAddClaim,
+  onBulkUploadClick,
   onUpdateClaimLoss,
   onDeleteClaim,
   onDuplicateClaim,
+  treaties,
+  scenarioTitle,
+  onExportSuccess,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLob, setSelectedLob] = useState<string>('ALL');
@@ -92,43 +102,86 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
   };
 
   const exportToCsv = () => {
+    if (treaties) {
+      const exportSet =
+        filteredClaims.length > 0 && (searchTerm.trim() !== '' || selectedLob !== 'ALL')
+          ? filteredClaims
+          : claimBreakdowns;
+
+      const subTitle =
+        selectedLob !== 'ALL'
+          ? `${scenarioTitle || 'Active Scenario'} (${selectedLob})`
+          : scenarioTitle || 'Active Scenario';
+
+      const res = exportScenarioClaimLedgerToCsv({
+        scenarioTitle: subTitle,
+        claimBreakdowns: exportSet,
+        treaties,
+      });
+
+      if (onExportSuccess) {
+        onExportSuccess(res.rowCount);
+      }
+      return;
+    }
+
+    // Comprehensive fallback if treaties not explicitly passed
     const headers = [
       'Claim Number',
       'Policy Number',
       'Insured Name',
-      'LOB',
+      'Line of Business (LOB)',
       'Location',
+      'Event Code',
       'Event Name',
-      'Gross Loss',
-      'Quota Share Ceded',
-      'Net After QS',
-      'Risk XOL Ceded',
+      'Event Date',
+      'Gross Loss (OMR)',
+      'Quota Share Ceded (OMR)',
+      'Net After Quota Share (OMR)',
+      'Risk XOL Ceded (OMR)',
+      'Spillover Above Risk Limit (OMR)',
       'Risk XOL Status',
-      'Cat XOL Share',
-      'Stop-Loss ASL Share',
-      'Cedant Net Retained',
+      'Cat XOL Share (OMR)',
+      'Stop-Loss ASL Share (OMR)',
+      'Total Reinsurance Recovery (OMR)',
+      'Cedant Net Retained (OMR)',
     ];
 
-    const rows = claimBreakdowns.map((c) => [
-      c.claim.claimNumber,
-      c.claim.policyNumber,
-      `"${c.claim.insuredName}"`,
-      c.claim.lob,
-      `"${c.claim.location}"`,
-      `"${c.claim.eventName}"`,
-      c.grossLoss,
-      c.qsCeded,
-      c.netAfterQS,
-      c.riskXolCeded,
-      c.riskXolStatus,
-      c.catXolCededShare,
-      c.aslCededShare || 0,
-      c.finalNetRetained,
-    ]);
+    const rows = claimBreakdowns.map((c) => {
+      const gross = c.grossLoss;
+      const qs = c.qsCeded;
+      const netQS = c.netAfterQS;
+      const risk = c.riskXolCeded;
+      const spillover = c.spilloverAboveRiskLimit || 0;
+      const cat = c.catXolCededShare;
+      const asl = c.aslCededShare || 0;
+      const totalRec = qs + risk + cat + asl;
+      const net = c.finalNetRetained;
+
+      return [
+        c.claim.claimNumber,
+        c.claim.policyNumber,
+        `"${c.claim.insuredName.replace(/"/g, '""')}"`,
+        c.claim.lob,
+        `"${c.claim.location.replace(/"/g, '""')}"`,
+        c.claim.eventId,
+        `"${c.claim.eventName.replace(/"/g, '""')}"`,
+        c.claim.eventDate,
+        gross.toFixed(2),
+        qs.toFixed(2),
+        netQS.toFixed(2),
+        risk.toFixed(2),
+        spillover.toFixed(2),
+        c.riskXolStatus,
+        cat.toFixed(2),
+        asl.toFixed(2),
+        totalRec.toFixed(2),
+        net.toFixed(2),
+      ].join(',');
+    });
 
     const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+      'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\r\n');
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -137,6 +190,10 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    if (onExportSuccess) {
+      onExportSuccess(claimBreakdowns.length);
+    }
   };
 
   // Totals for current filtered set
@@ -175,14 +232,24 @@ export const ClaimLedgerTable: React.FC<ClaimLedgerTableProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onAddClaim}
-            className="px-3 py-1.5 bg-[#ff4b4b] hover:bg-[#ff3333] text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+            className="px-3 py-1.5 bg-[#ff4b4b] hover:bg-[#ff3333] text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Claim</span>
           </button>
+          {onBulkUploadClick && (
+            <button
+              onClick={onBulkUploadClick}
+              className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+              title="Bulk upload multiple claims from a CSV spreadsheet"
+            >
+              <Upload className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Bulk Upload CSV</span>
+            </button>
+          )}
           <button
             onClick={exportToCsv}
-            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export CSV</span>
