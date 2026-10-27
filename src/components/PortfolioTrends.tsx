@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Claim, TreatyConfig, OverallCalculationSummary, LineOfBusiness } from '../types/reinsurance';
+import { Claim, TreatyConfig, OverallCalculationSummary } from '../types/reinsurance';
 import { formatCurrency, formatPercent, OMANI_RIAL_SIGN } from '../utils/reinsuranceEngine';
 import {
   TrendingUp,
@@ -19,6 +19,10 @@ import {
   BarChart2,
   AlertTriangle,
   CheckCircle2,
+  Sparkles,
+  Flame,
+  ShieldAlert,
+  Tag,
 } from 'lucide-react';
 
 interface PortfolioTrendsProps {
@@ -53,6 +57,7 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
   const [granularity, setGranularity] = useState<'month' | 'day'>('month');
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [showDataTable, setShowDataTable] = useState<boolean>(false);
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(true);
 
   // Filter claims by selected LOB
   const filteredClaims = useMemo(() => {
@@ -231,11 +236,37 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
     };
   }, [trendData]);
 
+  // Peak Severity Analysis and Driver Claims
+  const peakSeverityDetails = useMemo(() => {
+    if (!trendStats.peakSeverityPeriod) return null;
+    const p = trendStats.peakSeverityPeriod;
+    const sorted = [...p.claims].sort((a, b) => b.grossLoss - a.grossLoss);
+    const topDrivers = sorted.slice(0, 3);
+    const topLossSum = topDrivers.reduce((s, c) => s + c.grossLoss, 0);
+    const topSharePct = p.totalGrossLoss > 0 ? (topLossSum / p.totalGrossLoss) * 100 : 0;
+
+    // Identify any secondary spikes (e.g. MoM severity increase >= 35%)
+    const secondarySpikes = trendData.filter(
+      (pt) =>
+        pt.periodKey !== p.periodKey &&
+        pt.momSevChangePct !== null &&
+        pt.momSevChangePct >= 35
+    );
+
+    return {
+      period: p,
+      topDrivers,
+      topSharePct,
+      primaryDriver: topDrivers[0] || null,
+      secondarySpikes,
+    };
+  }, [trendStats.peakSeverityPeriod, trendData]);
+
   // SVG Chart Geometry
   const chartConfig = useMemo(() => {
     const width = 800;
-    const height = 300;
-    const margin = { top: 35, right: 70, bottom: 45, left: 60 };
+    const height = 320;
+    const margin = { top: 48, right: 70, bottom: 45, left: 60 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -322,6 +353,14 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
       ? chartConfig.pointsCoords[hoveredPointIndex]
       : null;
 
+  // Coordinate of the peak severity point on the chart
+  const peakSevPt = useMemo(() => {
+    if (!trendStats.peakSeverityPeriod || chartConfig.pointsCoords.length === 0) return null;
+    return chartConfig.pointsCoords.find(
+      (pt) => pt.data.periodKey === trendStats.peakSeverityPeriod?.periodKey
+    );
+  }, [trendStats.peakSeverityPeriod, chartConfig.pointsCoords]);
+
   return (
     <div className="st-card p-5 bg-white border border-slate-200 rounded-xl shadow-xs space-y-4">
       {/* Header and Controls */}
@@ -341,7 +380,7 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Track how claim occurrence rates (frequency) and average claim severity (incurred loss in &#x20c4;) evolve over time.
+                Track how claim occurrence rates (frequency) and average claim severity (incurred loss in &#x20c4;) evolve over time, with outlier spike callouts.
               </p>
             </div>
           </div>
@@ -349,6 +388,20 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
 
         {/* Action Controls: Metrics Mode & LOB filter */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Annotations Toggle */}
+          <button
+            onClick={() => setShowAnnotations(!showAnnotations)}
+            className={`px-2 py-1 rounded text-[11px] font-semibold border flex items-center gap-1 transition cursor-pointer ${
+              showAnnotations
+                ? 'bg-amber-50 text-amber-800 border-amber-300 shadow-2xs font-bold'
+                : 'bg-white text-slate-500 border-slate-200 hover:text-slate-800'
+            }`}
+            title="Toggle peak severity callout annotations on the chart"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Spike Callouts {showAnnotations ? 'ON' : 'OFF'}</span>
+          </button>
+
           {/* LOB Dropdown Filter */}
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-md px-2 py-1">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
@@ -602,10 +655,17 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
             <span className="w-4 border-t-2 border-dashed border-indigo-400 inline-block"></span>
             <span className="text-slate-500">Risk XOL Cap ({formatCurrency(treaties.riskXol.limit + treaties.riskXol.attachmentPoint)})</span>
           </div>
+
+          {showAnnotations && peakSeverityDetails && (
+            <div className="flex items-center gap-1.5 text-amber-700 font-semibold">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+              <span>Peak Spike Callout Active</span>
+            </div>
+          )}
         </div>
 
         <div className="text-[11px] text-slate-400 font-mono">
-          Hover over data nodes for detailed period inspection
+          Hover over data nodes or click spike badges for details
         </div>
       </div>
 
@@ -619,7 +679,7 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
           <div className="w-full overflow-x-auto">
             <svg
               viewBox={`0 0 ${chartConfig.width} ${chartConfig.height}`}
-              className="w-full h-auto min-w-[620px] select-none"
+              className="w-full h-auto min-w-[640px] select-none"
             >
               <defs>
                 {/* Gradient for Frequency area */}
@@ -895,6 +955,123 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
                   </g>
                 );
               })}
+
+              {/* Callout Annotations for Peak Severity Month & Outlier Spike */}
+              {showAnnotations && peakSeverityDetails && peakSevPt && (
+                (() => {
+                  const targetY =
+                    metricMode === 'totalLoss' ? peakSevPt.yTotal : peakSevPt.ySev;
+
+                  // Compute callout box placement with bounds clamping
+                  const boxWidth = 230;
+                  const boxHeight = 44;
+                  let boxX = peakSevPt.x - boxWidth / 2;
+                  if (boxX < chartConfig.margin.left + 5) {
+                    boxX = chartConfig.margin.left + 5;
+                  } else if (boxX + boxWidth > chartConfig.width - chartConfig.margin.right) {
+                    boxX = chartConfig.width - chartConfig.margin.right - boxWidth;
+                  }
+
+                  const isNearTop = targetY < chartConfig.margin.top + 55;
+                  const boxY = isNearTop ? targetY + 24 : targetY - 52;
+                  const stemStartY = isNearTop ? boxY : boxY + boxHeight;
+                  const stemEndY = isNearTop ? targetY + 6 : targetY - 6;
+
+                  const driverName = peakSeverityDetails.primaryDriver
+                    ? peakSeverityDetails.primaryDriver.insuredName.length > 22
+                      ? `${peakSeverityDetails.primaryDriver.insuredName.substring(0, 20)}...`
+                      : peakSeverityDetails.primaryDriver.insuredName
+                    : 'Outlier Loss';
+
+                  const driverAmount = peakSeverityDetails.primaryDriver
+                    ? formatCurrency(peakSeverityDetails.primaryDriver.grossLoss)
+                    : '';
+
+                  return (
+                    <g className="cursor-pointer select-none">
+                      {/* Pulsing Target Halo */}
+                      <circle
+                        cx={peakSevPt.x}
+                        cy={targetY}
+                        r={12}
+                        fill="none"
+                        stroke="#f59e0b"
+                        strokeWidth="2"
+                        className="animate-ping"
+                        opacity={0.6}
+                      />
+                      <circle
+                        cx={peakSevPt.x}
+                        cy={targetY}
+                        r={6.5}
+                        fill="#f59e0b"
+                        stroke="#ffffff"
+                        strokeWidth="2"
+                      />
+
+                      {/* Connecting Pointer Stem */}
+                      <line
+                        x1={peakSevPt.x}
+                        y1={stemStartY}
+                        x2={peakSevPt.x}
+                        y2={stemEndY}
+                        stroke="#d97706"
+                        strokeWidth="1.5"
+                        strokeDasharray="3,2"
+                      />
+
+                      {/* Callout Container */}
+                      <g transform={`translate(${boxX}, ${boxY})`}>
+                        {/* Background with shadow */}
+                        <rect
+                          x={0}
+                          y={0}
+                          width={boxWidth}
+                          height={boxHeight}
+                          rx={6}
+                          fill="#ffffff"
+                          stroke="#f59e0b"
+                          strokeWidth="1.5"
+                          className="filter drop-shadow-md"
+                        />
+                        {/* Left orange accent strip */}
+                        <rect x={0} y={0} width={4} height={boxHeight} rx={2} fill="#f59e0b" />
+
+                        {/* Top Line: Peak Badge */}
+                        <text
+                          x={12}
+                          y={16}
+                          fontSize="10"
+                          fontWeight="bold"
+                          fill="#92400e"
+                          className="font-mono tracking-tight"
+                        >
+                          ★ PEAK SEVERITY: {peakSeverityDetails.period.label}
+                        </text>
+
+                        {/* Severity average */}
+                        <text
+                          x={boxWidth - 10}
+                          y={16}
+                          fontSize="9.5"
+                          fontWeight="bold"
+                          textAnchor="end"
+                          fill="#b45309"
+                          className="font-mono"
+                        >
+                          {formatCurrency(peakSeverityDetails.period.avgSeverity)}
+                        </text>
+
+                        {/* Driver Claim Subtitle */}
+                        <text x={12} y={32} fontSize="9" fill="#475569" className="font-sans">
+                          Driver: <tspan fontWeight="bold" fill="#0f172a">{driverName}</tspan>{' '}
+                          <tspan fill="#b45309" fontWeight="bold">({driverAmount})</tspan>
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })()
+              )}
             </svg>
           </div>
         )}
@@ -977,6 +1154,110 @@ export const PortfolioTrends: React.FC<PortfolioTrendsProps> = ({
           </div>
         )}
       </div>
+
+      {/* Peak Severity Outlier & Spike Drivers Dossier */}
+      {peakSeverityDetails && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/5 to-slate-50 border border-amber-300/80 rounded-xl p-4 space-y-3 shadow-2xs">
+          {/* Banner Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/60 pb-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Flame className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono flex items-center gap-2 flex-wrap">
+                  <span>Peak Severity Outlier Drivers: {peakSeverityDetails.period.label}</span>
+                  <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-300">
+                    Avg: {formatCurrency(peakSeverityDetails.period.avgSeverity)} / claim
+                  </span>
+                </h4>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  The {peakSeverityDetails.topDrivers.length} largest claims below accounted for{' '}
+                  <strong className="text-amber-900 font-bold">
+                    {peakSeverityDetails.topSharePct.toFixed(1)}%
+                  </strong>{' '}
+                  of the entire month&rsquo;s gross incurred losses, driving the significant severity spike on the trend chart.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-left sm:text-right shrink-0">
+              <span className="text-[10px] uppercase font-bold text-amber-800 font-mono block">
+                Total Month Incurred
+              </span>
+              <span className="text-sm font-bold text-slate-900 font-mono">
+                {formatCurrency(peakSeverityDetails.period.totalGrossLoss)}
+              </span>
+            </div>
+          </div>
+
+          {/* Driver Claims Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {peakSeverityDetails.topDrivers.map((driver, dIdx) => {
+              const shareOfPeriod =
+                peakSeverityDetails.period.totalGrossLoss > 0
+                  ? (driver.grossLoss / peakSeverityDetails.period.totalGrossLoss) * 100
+                  : 0;
+
+              const riskCap = treaties.riskXol.limit + treaties.riskXol.attachmentPoint;
+              const exceedsRiskXol = driver.grossLoss > riskCap;
+              const attachesCatXol = driver.grossLoss >= treaties.catXol.attachmentPoint;
+
+              return (
+                <div
+                  key={driver.id}
+                  className="p-3 bg-white border border-amber-200/90 rounded-lg shadow-2xs space-y-2 hover:border-amber-400 hover:shadow-xs transition"
+                >
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                      #{dIdx + 1} Outlier Driver
+                    </span>
+                    <span className="font-bold text-amber-700 font-mono">
+                      {shareOfPeriod.toFixed(1)}% of Month
+                    </span>
+                  </div>
+
+                  <div>
+                    <h5
+                      className="text-xs font-bold text-slate-900 truncate"
+                      title={driver.insuredName}
+                    >
+                      {driver.insuredName}
+                    </h5>
+                    <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+                      {driver.claimNumber} • {driver.location}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                    <span className="text-[10px] text-slate-500">Gross Incurred:</span>
+                    <span className="font-bold text-slate-900 font-mono">
+                      {formatCurrency(driver.grossLoss)}
+                    </span>
+                  </div>
+
+                  {/* Treaty Absorption Impact Badge */}
+                  <div className="text-[10px] pt-0.5">
+                    {attachesCatXol ? (
+                      <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-semibold block truncate">
+                        🔴 Attaches Cat XOL Layer (&ge; {formatCurrency(treaties.catXol.attachmentPoint)})
+                      </span>
+                    ) : exceedsRiskXol ? (
+                      <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold block truncate">
+                        🟠 Risk XOL Limit Exceeded (+{formatCurrency(driver.grossLoss - riskCap)} spillover)
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold block truncate">
+                        🟡 Covered Within Risk XOL Layer
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Toggle Monthly Data Table for Actuarial Audit Trail */}
       <div className="pt-1">
